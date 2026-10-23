@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import type { WidgetApi } from 'matrix-widget-api';
-import type { Game } from '../model/game';
 
 export type MemberProfile = { name: string; avatar?: string };
 
@@ -8,13 +7,14 @@ export function displayName(userId: string): string {
   return userId.match(/^@([^:]+):/)?.[1] ?? userId;
 }
 
-export function usePlayerProfiles(api: WidgetApi | null, connected: boolean, game: Game | null) {
+export function useRoomMemberProfiles(
+  api: WidgetApi | null,
+  connected: boolean,
+  playerIds: string[],
+) {
   const [members, setMembers] = useState<Record<string, MemberProfile>>({});
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
-  const avatarKey =
-    game?.phase === 'lobby'
-      ? game.joined.map((id) => `${id}:${members[id]?.avatar ?? ''}`).join('|')
-      : '';
+  const avatarKey = playerIds.map((id) => `${id}:${members[id]?.avatar ?? ''}`).join('|');
 
   useEffect(() => {
     if (!api || !connected) return;
@@ -29,17 +29,18 @@ export function usePlayerProfiles(api: WidgetApi | null, connected: boolean, gam
         )) {
           if (
             !member.state_key ||
-            member.content.membership !== 'join' ||
+            member.content['membership'] !== 'join' ||
             profiles[member.state_key]
           )
             continue;
+          const displayname = member.content['displayname'];
+          const avatar = member.content['avatar_url'];
           profiles[member.state_key] = {
             name:
-              typeof member.content.displayname === 'string' && member.content.displayname.trim()
-                ? member.content.displayname
+              typeof displayname === 'string' && displayname.trim()
+                ? displayname
                 : displayName(member.state_key),
-            avatar:
-              typeof member.content.avatar_url === 'string' ? member.content.avatar_url : undefined,
+            ...(typeof avatar === 'string' ? { avatar } : {}),
           };
         }
         setMembers(profiles);
@@ -56,11 +57,11 @@ export function usePlayerProfiles(api: WidgetApi | null, connected: boolean, gam
   }, [api, connected]);
 
   useEffect(() => {
-    if (!api || !connected || !game || game.phase !== 'lobby') return;
+    if (!api || !connected || playerIds.length === 0) return;
     let alive = true;
     const urls: string[] = [];
     const avatars = new Map(
-      game.joined
+      playerIds
         .map((id) => [id, members[id]?.avatar])
         .filter((item): item is [string, string] => !!item[1]),
     );
@@ -81,7 +82,7 @@ export function usePlayerProfiles(api: WidgetApi | null, connected: boolean, gam
       alive = false;
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [api, connected, game?.id, game?.phase, avatarKey]);
+  }, [api, connected, avatarKey]);
 
   return { members, avatarUrls };
 }

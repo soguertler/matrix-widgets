@@ -4,53 +4,135 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@tailwindcss/vite':
+      specifier: ^4.1.0
+      version: 4.3.3
+    '@tsconfig/strictest':
+      specifier: ^2.0.8
+      version: 2.0.8
+    '@tsconfig/vite-react':
+      specifier: ^8.0.6
+      version: 8.1.1
+    '@types/react':
+      specifier: ^19.0.0
+      version: 19.3.0
+    '@types/react-dom':
+      specifier: ^19.0.0
+      version: 19.3.0
+    '@vitejs/plugin-react':
+      specifier: ^4.7.0
+      version: 4.7.0
+    lucide-react:
+      specifier: 1.61.0
+      version: 1.61.0
+    matrix-widget-api:
+      specifier: 1.20.0
+      version: 1.20.0
+    react:
+      specifier: ^19.0.0
+      version: 19.3.1
+    react-dom:
+      specifier: ^19.0.0
+      version: 19.3.1
+    tailwindcss:
+      specifier: ^4.1.0
+      version: 4.3.3
+    typescript:
+      specifier: ^5.9.0
+      version: 5.9.3
+    vite:
+      specifier: ^6.4.5
+      version: 6.4.5
+    vite-plugin-singlefile:
+      specifier: 2.3.4
+      version: 2.3.4
+
 importers:
 
   .:
-    dependencies:
-      lucide-react:
-        specifier: 1.61.0
-        version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
-      matrix-widget-api:
-        specifier: 1.20.0
-        version: 1.20.0
-      react:
-        specifier: ^19.0.0
-        version: 19.3.1
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.3.1(react@19.3.1)
     devDependencies:
-      '@tailwindcss/vite':
-        specifier: ^4.1.0
-        version: 4.3.3(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@vitejs/plugin-react':
-        specifier: ^4.7.0
-        version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
       oxfmt:
         specifier: 0.74.0
         version: 0.74.0
       oxlint:
         specifier: 1.89.0
         version: 1.89.0
+
+  packages/doodle-phone:
+    dependencies:
+      '@widget-games/widget-shared':
+        specifier: workspace:^
+        version: link:../widget-shared
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
+      matrix-widget-api:
+        specifier: 'catalog:'
+        version: 1.20.0
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.3(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@widget-games/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
       tailwindcss:
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.3.3
       typescript:
-        specifier: ^5.9.0
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^6.4.5
+        specifier: 'catalog:'
         version: 6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)
       vite-plugin-singlefile:
-        specifier: 2.3.4
+        specifier: 'catalog:'
         version: 2.3.4(rollup@4.65.0)(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/tsconfig:
+    devDependencies:
+      '@tsconfig/strictest':
+        specifier: 'catalog:'
+        version: 2.0.8
+      '@tsconfig/vite-react':
+        specifier: 'catalog:'
+        version: 8.1.1
+
+  packages/widget-shared:
+    dependencies:
+      matrix-widget-api:
+        specifier: 'catalog:'
+        version: 1.20.0
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@widget-games/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
 packages:
 
@@ -760,6 +842,12 @@ packages:
     resolution: {integrity: sha512-yYU8cogLeSh/ms2jh8Fj7jaba/EWa7Ja6GoUqYZaraEuCI5YS6ms6ObZgjjedm+jm6XZjdNRWBpPP6Z86oOxcw==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
+
+  '@tsconfig/strictest@2.0.8':
+    resolution: {integrity: sha512-XnQ7vNz5HRN0r88GYf1J9JJjqtZPiHt2woGJOo2dYqyHGGcd6OLGqSlBB6p1j9mpzja6Oe5BoPqWmeDx6X9rLw==}
+
+  '@tsconfig/vite-react@8.1.1':
+    resolution: {integrity: sha512-TdLtRE9INt7aupEC2yhem6y4RN8T+B4oa2OUYsay0ioxSDl8Q4yaq0k2yc86Gb2BEHjKp4RUxgIzqOTk4IQ8dQ==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1609,6 +1697,10 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       tailwindcss: 4.3.3
       vite: 6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)
+
+  '@tsconfig/strictest@2.0.8': {}
+
+  '@tsconfig/vite-react@8.1.1': {}
 
   '@types/babel__core@7.20.5':
     dependencies:

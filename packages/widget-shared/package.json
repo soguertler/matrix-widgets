@@ -1,0 +1,21 @@
+{
+  "name": "@widget-games/widget-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "matrix-widget-api": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@widget-games/tsconfig": "workspace:^",
+    "typescript": "catalog:"
+  }
+}

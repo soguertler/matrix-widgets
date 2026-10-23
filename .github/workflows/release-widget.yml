@@ -26,15 +26,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test && pnpm lint && pnpm fmt:check && pnpm build
-      - name: Publish standalone HTML
+      - name: Publish standalone game HTML
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="build-${GITHUB_SHA}"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" dist/index.html \
+            mkdir -p release
+            cp packages/doodle-phone/dist/index.html release/doodle-phone.html
+            gh release create "$tag" release/doodle-phone.html \
               --target "$GITHUB_SHA" \
-              --title "Doodle Phone ${GITHUB_SHA::7}" \
-              --notes "Standalone widget build from ${GITHUB_SHA}." \
+              --title "Widget Games ${GITHUB_SHA::7}" \
+              --notes "Standalone Doodle Phone widget build from ${GITHUB_SHA}." \
               --latest
           fi

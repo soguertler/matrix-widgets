@@ -1,6 +1,6 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, rasterize } from '../drawing/fill';
 import { submissionKey, type Game } from '../model/game';
-import { displayName } from '../matrix/PlayerProfiles';
+import { displayName } from '@widget-games/widget-shared';
 
 export async function exportStory(game: Game, bookIndex: number): Promise<void> {
   const book = game.players[bookIndex];

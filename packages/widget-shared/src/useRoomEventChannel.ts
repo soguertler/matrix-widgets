@@ -4,24 +4,39 @@ import {
   MatrixCapabilities,
   WidgetApi,
   WidgetEventCapability,
+  type IRoomEvent,
 } from 'matrix-widget-api';
-import {
-  GAME_EVENT,
-  gameEventBytes,
-  MAX_GAME_EVENT_BYTES,
-  type GameAction,
-  type GameEvent,
-} from '../model/game';
-import { readCurrentGameEvents } from './GameEvents';
 
-export function useMatrixGame(widgetId: string | null, enabled: boolean) {
+export type RoomEvent = Pick<IRoomEvent, 'sender' | 'event_id' | 'origin_server_ts' | 'content'>;
+
+type Options<TEvent extends RoomEvent> = {
+  widgetId: string | null;
+  enabled: boolean;
+  eventType: string;
+  readEvents: (read: (limit: number) => Promise<RoomEvent[]>) => Promise<TEvent[]>;
+  validateAction?: (action: object) => string | null;
+  readErrorLabel?: string;
+  sendErrorLabel?: string;
+  permissionError?: string;
+};
+
+export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends object>({
+  widgetId,
+  enabled,
+  eventType,
+  readEvents,
+  validateAction,
+  readErrorLabel = 'Could not read room events',
+  sendErrorLabel = 'Could not send room event',
+  permissionError = 'The Matrix client did not grant permission to send and receive room events. Review this widget’s permissions in your client, then reopen it.',
+}: Options<TEvent>) {
   const apiRef = useRef<WidgetApi | null>(null);
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
   const [api, setApi] = useState<WidgetApi | null>(null);
   const [connected, setConnected] = useState(false);
-  const [gameStateReady, setGameStateReady] = useState(false);
+  const [stateReady, setStateReady] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [events, setEvents] = useState<GameEvent[]>([]);
+  const [events, setEvents] = useState<TEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,8 +45,8 @@ export function useMatrixGame(widgetId: string | null, enabled: boolean) {
     const widgetApi = new WidgetApi(widgetId, '*');
     apiRef.current = widgetApi;
     setApi(widgetApi);
-    widgetApi.requestCapabilityToSendEvent(GAME_EVENT);
-    widgetApi.requestCapabilityToReceiveEvent(GAME_EVENT);
+    widgetApi.requestCapabilityToSendEvent(eventType);
+    widgetApi.requestCapabilityToReceiveEvent(eventType);
     widgetApi.requestCapabilityToReceiveState('m.room.member');
     widgetApi.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
     let alive = true;
@@ -44,18 +59,16 @@ export function useMatrixGame(widgetId: string | null, enabled: boolean) {
       if (reading) return;
       reading = true;
       try {
-        const roomEvents = await readCurrentGameEvents((limit) =>
-          widgetApi.readRoomEvents(GAME_EVENT, limit),
-        );
+        const roomEvents = await readEvents((limit) => widgetApi.readRoomEvents(eventType, limit));
         if (alive) {
           setEvents(roomEvents);
-          setGameStateReady(true);
+          setStateReady(true);
           setError('');
         }
       } catch (cause) {
         if (alive) {
-          setGameStateReady(false);
-          setError(`Could not read game state: ${String(cause)}`);
+          setStateReady(false);
+          setError(`${readErrorLabel}: ${String(cause)}`);
         }
       } finally {
         reading = false;
@@ -67,16 +80,14 @@ export function useMatrixGame(widgetId: string | null, enabled: boolean) {
       if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
       if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
       const canSend = widgetApi.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Send, GAME_EVENT).raw,
+        WidgetEventCapability.forRoomEvent(EventDirection.Send, eventType).raw,
       );
       const canReceive = widgetApi.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Receive, GAME_EVENT).raw,
+        WidgetEventCapability.forRoomEvent(EventDirection.Receive, eventType).raw,
       );
       if (!canSend || !canReceive) {
         setPermissionDenied(true);
-        setError(
-          'The Matrix client did not grant permission to send and receive game events. Review this widget’s permissions in your client, then reopen it.',
-        );
+        setError(permissionError);
         return;
       }
       setPermissionDenied(false);
@@ -106,27 +117,28 @@ export function useMatrixGame(widgetId: string | null, enabled: boolean) {
       setApi(null);
       setConnected(false);
     };
-  }, [widgetId, enabled]);
+  }, [widgetId, enabled, eventType, readEvents, readErrorLabel, permissionError]);
 
-  async function send(action: GameAction): Promise<boolean> {
+  async function send(action: TAction): Promise<boolean> {
     if (!apiRef.current || !connected) return false;
-    if (gameEventBytes(action) > MAX_GAME_EVENT_BYTES) {
-      setError('This drawing is too large to send. Undo a fill or simplify it.');
+    const validationError = validateAction?.(action);
+    if (validationError) {
+      setError(validationError);
       return false;
     }
     setBusy(true);
     setError('');
     try {
-      await apiRef.current.sendRoomEvent(GAME_EVENT, action);
+      await apiRef.current.sendRoomEvent(eventType, action);
       await refreshRef.current?.();
       return true;
     } catch (cause) {
-      setError(`Could not save turn: ${String(cause)}`);
+      setError(`${sendErrorLabel}: ${String(cause)}`);
       return false;
     } finally {
       setBusy(false);
     }
   }
 
-  return { api, connected, gameStateReady, permissionDenied, events, busy, error, setError, send };
+  return { api, connected, stateReady, permissionDenied, events, busy, error, setError, send };
 }

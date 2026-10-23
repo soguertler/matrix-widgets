@@ -1,0 +1,5 @@
+{
+  "extends": "@widget-games/tsconfig/base",
+  "compilerOptions": { "noEmit": true, "types": [] },
+  "include": ["src"]
+}

@@ -1,34 +1,18 @@
 {
-  "name": "doodle-phone",
-  "version": "0.1.0",
+  "name": "widget-games",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/model/*.test.ts src/drawing/*.test.ts src/matrix/*.test.ts src/components/*.test.ts",
-    "fmt": "oxfmt src vite.config.ts index.html package.json tsconfig.json",
-    "fmt:check": "oxfmt --check src vite.config.ts index.html package.json tsconfig.json",
-    "lint": "oxlint src"
-  },
-  "dependencies": {
-    "lucide-react": "1.61.0",
-    "matrix-widget-api": "1.20.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "dev": "pnpm --filter @widget-games/doodle-phone dev",
+    "build": "pnpm --filter @widget-games/widget-shared typecheck && pnpm --filter @widget-games/doodle-phone build",
+    "test": "pnpm --filter @widget-games/doodle-phone test",
+    "lint": "oxlint packages",
+    "fmt": "oxfmt packages package.json pnpm-workspace.yaml README.md",
+    "fmt:check": "oxfmt --check packages package.json pnpm-workspace.yaml README.md"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.7.0",
     "oxfmt": "0.74.0",
-    "oxlint": "1.89.0",
-    "tailwindcss": "^4.1.0",
-    "typescript": "^5.9.0",
-    "vite": "^6.4.5",
-    "vite-plugin-singlefile": "2.3.4"
+    "oxlint": "1.89.0"
   },
   "packageManager": "pnpm@9.14.4"
 }

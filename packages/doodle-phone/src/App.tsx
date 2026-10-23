@@ -1,22 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import { displayName, useRoomMemberProfiles, widgetUrlParam } from '@widget-games/widget-shared';
 import Lobby from './components/Lobby';
-import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
 import { useMatrixGame } from './matrix/useMatrixGame';
 import Playing from './components/Playing';
 import Reveal from './components/Reveal';
 import { gamesFromEvents } from './model/game';
 
-function urlParam(name: string): string | null {
-  const query = new URLSearchParams(window.location.search);
-  const fragment = new URLSearchParams(window.location.hash.replace(/^#\/?\??/, ''));
-  return query.get(name) ?? fragment.get(name);
-}
-
 export default function App() {
-  const widgetId = useMemo(() => urlParam('widgetId'), []);
-  const userId = useMemo(() => urlParam('userId'), []);
-  const roomId = useMemo(() => urlParam('roomId'), []);
+  const widgetId = useMemo(() => widgetUrlParam('widgetId'), []);
+  const userId = useMemo(() => widgetUrlParam('userId'), []);
+  const roomId = useMemo(() => widgetUrlParam('roomId'), []);
   const missingSetup = window.parent === window || !widgetId || !userId;
   const { api, connected, gameStateReady, permissionDenied, events, busy, error, setError, send } =
     useMatrixGame(widgetId, !missingSetup);
@@ -26,7 +20,11 @@ export default function App() {
   const { current: game, previousReveal } = useMemo(() => gamesFromEvents(events), [events]);
   const showingPrevious =
     viewPrevious && previousReveal && game?.phase !== 'playing' && game?.phase !== 'reveal';
-  const { members, avatarUrls } = usePlayerProfiles(api, connected, game);
+  const { members, avatarUrls } = useRoomMemberProfiles(
+    api,
+    connected,
+    game?.phase === 'lobby' ? game.joined : [],
+  );
 
   useEffect(() => {
     const syncFullscreen = () => setFullscreen(!!document.fullscreenElement);
