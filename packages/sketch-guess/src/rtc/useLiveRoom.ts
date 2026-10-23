@@ -9,6 +9,7 @@ export type Packet =
   | { kind: 'stroke'; stroke: Stroke; index: number }
   | { kind: 'draft'; stroke: Stroke; index: number }
   | { kind: 'clear'; index: number }
+  | { kind: 'undo'; strokeId: string; index: number }
   | { kind: 'guess'; player: string; guess: string; index: number }
   | { kind: 'chat'; player: string; guess: string; index: number }
   | { kind: 'sync'; index: number };
@@ -26,6 +27,10 @@ function parsePacket(data: Uint8Array): Packet | null {
     return typeof value.player === 'string' ? (packet as Packet) : null;
   if (!Number.isInteger(value.index)) return null;
   if (value.kind === 'clear' || value.kind === 'sync') return packet as Packet;
+  if (value.kind === 'undo')
+    return typeof value.strokeId === 'string' && value.strokeId.length <= 100
+      ? (packet as Packet)
+      : null;
   if (value.kind === 'guess' || value.kind === 'chat') {
     return typeof value.player === 'string' &&
       typeof value.guess === 'string' &&

@@ -1,5 +1,5 @@
 import { useRef, useState, type Dispatch, type PointerEvent, type SetStateAction } from 'react';
-import { Eraser, RotateCcw } from 'lucide-react';
+import { Eraser, RotateCcw, Undo2 } from 'lucide-react';
 import type { Point, Stroke } from '../model/game';
 
 const colors = [
@@ -23,6 +23,7 @@ export default function Canvas({
   onStroke,
   onDraft,
   onClear,
+  onUndo,
   remoteDraft,
 }: {
   strokes: Stroke[];
@@ -31,6 +32,7 @@ export default function Canvas({
   onStroke: (stroke: Stroke) => void;
   onDraft: (stroke: Stroke) => void;
   onClear: () => void;
+  onUndo: (strokeId: string) => void;
   remoteDraft?: Stroke | null;
 }) {
   const svg = useRef<SVGSVGElement>(null);
@@ -105,6 +107,19 @@ export default function Canvas({
               style={{ background: value }}
             />
           ))}
+          <button
+            type="button"
+            disabled={strokes.length === 0}
+            onClick={() => {
+              const last = strokes.at(-1);
+              if (!last) return;
+              setStrokes((old) => old.filter((stroke) => stroke.id !== last.id));
+              onUndo(last.id);
+            }}
+            className="flex items-center gap-1 rounded-lg bg-slate-700 px-3 py-2 disabled:opacity-50"
+          >
+            <Undo2 size={16} /> Undo
+          </button>
           <button
             type="button"
             title="Eraser"

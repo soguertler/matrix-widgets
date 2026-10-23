@@ -1,53 +1,7 @@
 import type { RoomEvent } from '@widget-games/widget-shared';
+import type { Language } from './words';
 
 export const EVENT_TYPE = 'com.widget_games.sketch_guess';
-export const WORDS = [
-  'apple',
-  'bicycle',
-  'castle',
-  'dragon',
-  'elephant',
-  'firework',
-  'guitar',
-  'hamburger',
-  'island',
-  'jellyfish',
-  'kangaroo',
-  'lighthouse',
-  'mushroom',
-  'octopus',
-  'pancake',
-  'rainbow',
-  'spaceship',
-  'telescope',
-  'umbrella',
-  'volcano',
-  'waterfall',
-  'whale',
-  'wizard',
-  'zebra',
-  'airplane',
-  'balloon',
-  'camera',
-  'dinosaur',
-  'envelope',
-  'forest',
-  'glasses',
-  'helicopter',
-  'ice cream',
-  'keyboard',
-  'mountain',
-  'newspaper',
-  'penguin',
-  'robot',
-  'snowman',
-  'teapot',
-  'unicorn',
-  'violin',
-  'window',
-  'yacht',
-];
-
 export type Point = { x: number; y: number };
 export type Stroke = { id: string; color: string; width: number; points: Point[] };
 export function isStroke(value: unknown): value is Stroke {
@@ -81,9 +35,11 @@ export function isStroke(value: unknown): value is Stroke {
   );
 }
 type Action =
-  | { kind: 'create'; gameId: string; rounds: number; seconds: number }
+  | { kind: 'create'; gameId: string; rounds: number; seconds: number; language: Language }
+  | { kind: 'settings'; gameId: string; language: Language; customWords: string[]; hints: number }
   | { kind: 'join' | 'leave' | 'cancel' | 'start'; gameId: string }
-  | { kind: 'round'; gameId: string; index: number; length: number }
+  | { kind: 'round'; gameId: string; index: number; mask: string }
+  | { kind: 'hint'; gameId: string; index: number; position: number; letter: string }
   | { kind: 'solve'; gameId: string; index: number; player: string; points: number }
   | { kind: 'expire'; gameId: string; index: number }
   | { kind: 'skip'; gameId: string; index: number }
@@ -96,13 +52,18 @@ export type Game = {
   players: string[];
   rounds: number;
   seconds: number;
+  language: Language;
+  customWords: string[];
+  hints: number;
+  usedWords: string[];
   phase: 'lobby' | 'choosing' | 'drawing' | 'reveal' | 'finished';
   index: number;
   drawer: string | null;
   startedAt: number;
   choosingAt: number;
   revealedAt: number;
-  length: number;
+  mask: string;
+  hintCount: number;
   word: string;
   strokes: Stroke[];
   scores: Record<string, number>;
@@ -142,7 +103,8 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
         action.rounds > 5 ||
         !Number.isInteger(action.seconds) ||
         action.seconds < 30 ||
-        action.seconds > 180
+        action.seconds > 180 ||
+        (action.language !== 'en' && action.language !== 'de')
       )
         continue;
       if (game && game.phase !== 'finished') continue;
@@ -153,13 +115,18 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
         players: [event.sender],
         rounds: action.rounds,
         seconds: action.seconds,
+        language: action.language,
+        customWords: [],
+        hints: 2,
+        usedWords: [],
         phase: 'lobby',
         index: -1,
         drawer: null,
         startedAt: 0,
         choosingAt: 0,
         revealedAt: 0,
-        length: 0,
+        mask: '',
+        hintCount: 0,
         word: '',
         strokes: [],
         scores: { [event.sender]: 0 },
@@ -169,6 +136,27 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
     }
     if (!game || action.gameId !== game.id) continue;
     if (
+      action.kind === 'settings' &&
+      game.phase === 'lobby' &&
+      event.sender === game.host &&
+      (action.language === 'en' || action.language === 'de') &&
+      Number.isInteger(action.hints) &&
+      action.hints >= 0 &&
+      action.hints <= 3 &&
+      Array.isArray(action.customWords) &&
+      action.customWords.length <= 100 &&
+      action.customWords.every(
+        (word) =>
+          typeof word === 'string' &&
+          word.trim().length > 0 &&
+          word.length <= 40 &&
+          /[\p{L}\p{N}]/u.test(word),
+      )
+    ) {
+      game.language = action.language;
+      game.customWords = action.customWords;
+      game.hints = action.hints;
+    } else if (
       action.kind === 'join' &&
       game.phase === 'lobby' &&
       !game.players.includes(event.sender) &&
@@ -214,17 +202,38 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       game.phase === 'choosing' &&
       event.sender === game.drawer &&
       action.index === game.index &&
-      Number.isInteger(action.length) &&
-      action.length > 0 &&
-      action.length < 40
+      typeof action.mask === 'string' &&
+      action.mask.length > 0 &&
+      action.mask.length <= 40 &&
+      /^[^\p{L}\p{N}]*$/u.test(action.mask) &&
+      action.mask.includes('_')
     ) {
       game.phase = 'drawing';
       game.startedAt = event.origin_server_ts;
       game.revealedAt = 0;
-      game.length = action.length;
+      game.mask = action.mask;
+      game.hintCount = 0;
       game.word = '';
       game.strokes = [];
       game.solved = [];
+    } else if (
+      action.kind === 'hint' &&
+      game.phase === 'drawing' &&
+      event.sender === game.drawer &&
+      action.index === game.index &&
+      game.hintCount < game.hints &&
+      Number.isInteger(action.position) &&
+      action.position >= 0 &&
+      action.position < Array.from(game.mask).length &&
+      Array.from(game.mask)[action.position] === '_' &&
+      typeof action.letter === 'string' &&
+      Array.from(action.letter).length === 1 &&
+      /[\p{L}\p{N}]/u.test(action.letter)
+    ) {
+      const chars = Array.from(game.mask);
+      chars[action.position] = action.letter;
+      game.mask = chars.join('');
+      game.hintCount += 1;
     } else if (
       action.kind === 'solve' &&
       game.phase === 'drawing' &&
@@ -254,6 +263,7 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       game.phase = 'reveal';
       game.revealedAt = event.origin_server_ts;
       game.word = action.word;
+      game.usedWords.push(action.word);
       game.strokes = action.strokes;
     } else if (
       action.kind === 'expire' &&

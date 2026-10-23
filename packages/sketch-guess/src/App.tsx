@@ -12,12 +12,13 @@ import StartScreen from './components/StartScreen';
 import Lobby from './components/Lobby';
 import Choosing from './components/Choosing';
 import Board from './components/Board';
-import { EVENT_TYPE, WORDS, compactDrawing, gameFromEvents, type Stroke } from './model/game';
+import { EVENT_TYPE, compactDrawing, gameFromEvents, type Stroke } from './model/game';
+import { normalizeGuess, wordChoices, wordMask } from './model/words';
 import { useLiveRoom, type Packet } from './rtc/useLiveRoom';
 import { readCurrentGameEvents } from './matrix/readEvents';
+import icon from './assets/icon.svg?raw';
 
 const capabilities = [MatrixCapabilities.MSC4515RtcTransports];
-const normal = (word: string) => word.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
 
 export default function App() {
   const widgetId = useMemo(() => widgetUrlParam('widgetId'), []);
@@ -45,6 +46,8 @@ export default function App() {
   const [chat, setChat] = useState<{ player: string; guess: string }[]>([]);
   const [now, setNow] = useState(Date.now());
   const pending = useRef(false);
+  const pendingHint = useRef(-1);
+  const pendingAdvance = useRef(false);
   const gameId = game?.phase !== 'finished' ? (game?.id ?? null) : null;
   const { members, avatarUrls } = useRoomMemberProfiles(api, connected, game?.players ?? []);
   const isDrawer = !!game && game.drawer === userId;
@@ -76,6 +79,14 @@ export default function App() {
         old.some((item) => item.id === packet.stroke.id) ? old : [...old, packet.stroke],
       );
     } else if (
+      packet.kind === 'undo' &&
+      !isDrawer &&
+      live.identities[current.drawer ?? ''] === identity
+    ) {
+      completedStrokeIds.current.add(packet.strokeId);
+      setStrokes((old) => old.filter((stroke) => stroke.id !== packet.strokeId));
+      setRemoteDraft((draft) => (draft?.id === packet.strokeId ? null : draft));
+    } else if (
       packet.kind === 'draft' &&
       !isDrawer &&
       live.identities[current.drawer ?? ''] === identity &&
@@ -106,7 +117,9 @@ export default function App() {
     ) {
       const text = packet.guess.trim().slice(0, 80);
       if (!text) return;
-      if (normal(text) === normal(wordRef.current)) {
+      if (
+        normalizeGuess(text, current.language) === normalizeGuess(wordRef.current, current.language)
+      ) {
         const remaining = Math.max(
           0,
           current.seconds - Math.floor((Date.now() - current.startedAt) / 1000),
@@ -141,6 +154,8 @@ export default function App() {
     completedStrokeIds.current.clear();
     setChat([]);
     pending.current = false;
+    pendingHint.current = -1;
+    pendingAdvance.current = false;
     setWord(roundKey ? (sessionStorage.getItem(`sketch-word:${roundKey}`) ?? '') : '');
   }, [roundKey]);
   useEffect(() => {
@@ -188,6 +203,47 @@ export default function App() {
     if (
       !game ||
       game.phase !== 'drawing' ||
+      !isDrawer ||
+      !word ||
+      game.hints === 0 ||
+      game.hintCount >= game.hints ||
+      pendingHint.current === game.hintCount ||
+      remaining <= 0
+    )
+      return;
+    const elapsed = game.seconds - remaining;
+    if (elapsed < (game.seconds * (game.hintCount + 1)) / (game.hints + 1)) return;
+    const hidden = Array.from(game.mask).flatMap((char, index) => (char === '_' ? [index] : []));
+    if (!hidden.length) return;
+    const position = hidden[(game.index * 17 + game.hintCount * 7) % hidden.length]!;
+    pendingHint.current = game.hintCount;
+    void action('hint', { index: game.index, position, letter: Array.from(word)[position] }).then(
+      (ok) => {
+        if (!ok) {
+          pendingHint.current = -1;
+          setError('Could not send a word hint.');
+        }
+      },
+    );
+  }, [remaining, game?.mask, game?.hintCount, game?.phase, word, isDrawer]);
+  useEffect(() => {
+    if (
+      !game ||
+      game.phase !== 'reveal' ||
+      !game.players.includes(userId ?? '') ||
+      now < game.revealedAt + 5000 ||
+      pendingAdvance.current
+    )
+      return;
+    pendingAdvance.current = true;
+    void action('start').then((ok) => {
+      if (!ok) pendingAdvance.current = false;
+    });
+  }, [now, game?.phase, game?.index, userId]);
+  useEffect(() => {
+    if (
+      !game ||
+      game.phase !== 'drawing' ||
       !game.players.includes(userId ?? '') ||
       now < game.startedAt + game.seconds * 1000 + 5000 ||
       pending.current
@@ -203,7 +259,7 @@ export default function App() {
     if (!game || !isDrawer) return;
     sessionStorage.setItem(`sketch-word:${roundKey}`, chosen);
     setWord(chosen);
-    await action('round', { index: game.index, length: chosen.replace(/\s/g, '').length });
+    await action('round', { index: game.index, mask: wordMask(chosen) });
   }
   async function submitGuess(event: FormEvent) {
     event.preventDefault();
@@ -222,20 +278,26 @@ export default function App() {
     if (!sent) setError('The live connection is unavailable.');
   }
   const choices = useMemo(() => {
-    const pool = [...WORDS].sort(() => Math.random() - 0.5);
-    return pool.slice(0, 3);
-  }, [roundKey]);
+    return game ? wordChoices(game.language, game.customWords, game.usedWords) : [];
+  }, [roundKey, game?.language, game?.customWords.join('\n'), game?.usedWords.join('\n')]);
 
   return (
     <main className="min-h-screen bg-slate-950 p-3 text-slate-100 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-indigo-700 to-fuchsia-700 p-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/70">
-              Matrix room game
-            </p>
-            <h1 className="text-3xl font-black">Sketch & Guess</h1>
-            <p className="text-sm text-white/80">Draw live. Guess fast. Score points.</p>
+          <div className="flex items-center gap-4">
+            <img
+              src={`data:image/svg+xml,${encodeURIComponent(icon)}`}
+              alt=""
+              className="h-14 w-14 rounded-xl"
+            />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-white/70">
+                Matrix room game
+              </p>
+              <h1 className="text-3xl font-black">Sketch & Guess</h1>
+              <p className="text-sm text-white/80">Draw live. Guess fast. Score points.</p>
+            </div>
           </div>
           <button
             type="button"
@@ -284,6 +346,7 @@ export default function App() {
                 gameId: crypto.randomUUID(),
                 rounds,
                 seconds,
+                language: 'en',
               })
             }
           />
@@ -300,6 +363,7 @@ export default function App() {
               (game.players.includes(userId ?? '') && now >= game.createdAt + 120_000)
             }
             onAction={(kind) => void action(kind)}
+            onSettings={(settings) => void action('settings', settings)}
           />
         )}
         {game?.phase === 'choosing' && (
@@ -329,6 +393,7 @@ export default function App() {
             onStroke={(stroke) => void live.send({ kind: 'stroke', stroke, index: game.index })}
             onDraft={(stroke) => void live.send({ kind: 'draft', stroke, index: game.index })}
             onClear={() => void live.send({ kind: 'clear', index: game.index })}
+            onUndo={(strokeId) => void live.send({ kind: 'undo', strokeId, index: game.index })}
             remoteDraft={remoteDraft}
             onNext={() => void action('start')}
             canAdvance={

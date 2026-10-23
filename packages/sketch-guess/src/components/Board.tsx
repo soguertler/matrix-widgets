@@ -18,6 +18,7 @@ export default function Board({
   onStroke,
   onDraft,
   onClear,
+  onUndo,
   remoteDraft,
   onNext,
   canAdvance,
@@ -40,6 +41,7 @@ export default function Board({
   onStroke: (stroke: Stroke) => void;
   onDraft: (stroke: Stroke) => void;
   onClear: () => void;
+  onUndo: (strokeId: string) => void;
   remoteDraft: Stroke | null;
   onNext: () => void;
   canAdvance: boolean;
@@ -59,7 +61,7 @@ export default function Board({
                 ? `The word was ${game.word}`
                 : isDrawer
                   ? `Draw: ${word || 'loading…'}`
-                  : `${game.length} letters`}
+                  : game.mask.split('').join(' ')}
             </h2>
             <p className="text-sm text-slate-400">
               <Pencil size={14} className="inline" />{' '}
@@ -77,6 +79,7 @@ export default function Board({
           onStroke={onStroke}
           onDraft={onDraft}
           onClear={onClear}
+          onUndo={onUndo}
           remoteDraft={remoteDraft}
         />
         {game.phase === 'reveal' && canAdvance && (

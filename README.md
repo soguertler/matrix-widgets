@@ -42,10 +42,11 @@ Unsubmitted turns are saved in the browser tab's session storage.
 also needs `&deviceId=$matrix_device_id`. The client must support the
 `org.matrix.msc4515.rtc_transports` widget capability, OpenID token requests,
 and provide a LiveKit transport. All players open the same widget in one Matrix
-room. The host creates a lobby, and players join before starting. Every player
-draws once per round; the drawer picks one of three words, and guessers score
-based on the remaining time. The host advances after each reveal; another player
-can advance after five seconds if the host is absent.
+room. The host creates a lobby, selects an English or German word list, sets up
+to three timed hints, and can add custom words before starting. Every player
+draws once per round; the drawer picks one of three words, can undo strokes,
+and guessers score based on the remaining time. Reveals advance automatically
+after five seconds.
 
 ## Use a release
 
@@ -73,9 +74,10 @@ error. A connected player's widget sends an expiry event when the round timer
 reaches zero. Drawing turns store vector strokes and PNG masks for area fills.
 
 Sketch & Guess uses `com.widget_games.sketch_guess` room events for lobbies,
-round starts, scores, and reveals. The secret word and guesses are absent from
-room events during drawing. LiveKit data packets carry private guesses, live
-stroke previews, and completed strokes;
+settings, round starts, timed letter hints, scores, and reveals. The full secret
+word and guesses are absent from room events during drawing; hints intentionally
+reveal individual letters. LiveKit data packets carry private guesses, live
+stroke previews, completed strokes, and undo actions;
 disconnected players can resume the current drawing through a stroke replay from
 the drawer. The reveal event stores the word and a compacted drawing in Matrix
 room history. Any joined player can expire a round five seconds after its timer

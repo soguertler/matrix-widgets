@@ -1,6 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import { compactDrawing, gameFromEvents } from './game.ts';
+import { normalizeGuess, wordMask, WORDS } from './words.ts';
 
 const alice = '@alice:localhost';
 const bob = '@bob:localhost';
@@ -17,24 +18,24 @@ function event(sender: string, kind: string, fields: Record<string, unknown> = {
 test('only the host starts and only the drawer advances a round', () => {
   clock = 1;
   const events = [
-    event(alice, 'create', { rounds: 1, seconds: 60 }),
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
     event(bob, 'join'),
     event(bob, 'start'),
     event(alice, 'start'),
-    event(bob, 'round', { index: 0, length: 5 }),
+    event(bob, 'round', { index: 0, mask: '_____' }),
   ];
   assert.equal(gameFromEvents(events)?.phase, 'choosing');
-  events.push(event(alice, 'round', { index: 0, length: 5 }));
+  events.push(event(alice, 'round', { index: 0, mask: '_____' }));
   assert.equal(gameFromEvents(events)?.phase, 'drawing');
 });
 
 test('a correct guess scores once and the word appears only after reveal', () => {
   clock = 1;
   const events = [
-    event(alice, 'create', { rounds: 1, seconds: 60 }),
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
     event(bob, 'join'),
     event(alice, 'start'),
-    event(alice, 'round', { index: 0, length: 5 }),
+    event(alice, 'round', { index: 0, mask: '_____' }),
     event(alice, 'solve', { index: 0, player: bob, points: 70 }),
     event(alice, 'solve', { index: 0, player: bob, points: 70 }),
   ];
@@ -51,10 +52,10 @@ test('a correct guess scores once and the word appears only after reveal', () =>
 test('a player can unblock a disconnected drawer only after the deadline', () => {
   clock = 1;
   const events = [
-    event(alice, 'create', { rounds: 1, seconds: 60 }),
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
     event(bob, 'join'),
     event(alice, 'start'),
-    event(alice, 'round', { index: 0, length: 5 }),
+    event(alice, 'round', { index: 0, mask: '_____' }),
   ];
   const early = event(bob, 'expire', { index: 0 });
   early.origin_server_ts = events[3]!.origin_server_ts + 64_000;
@@ -76,7 +77,7 @@ test('reveal drawing stays below the point budget', () => {
 test('a stalled word choice moves to the next drawer after 30 seconds', () => {
   clock = 1;
   const events = [
-    event(alice, 'create', { rounds: 1, seconds: 60 }),
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
     event(bob, 'join'),
     event(alice, 'start'),
   ];
@@ -89,7 +90,10 @@ test('a stalled word choice moves to the next drawer after 30 seconds', () => {
 
 test('joined players can recover a deserted lobby or advance a reveal after a delay', () => {
   clock = 1;
-  const lobby = [event(alice, 'create', { rounds: 1, seconds: 60 }), event(bob, 'join')];
+  const lobby = [
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
+    event(bob, 'join'),
+  ];
   const cancel = event(bob, 'cancel');
   cancel.origin_server_ts = lobby[0]!.origin_server_ts + 119_999;
   assert.equal(gameFromEvents([...lobby, cancel])?.phase, 'lobby');
@@ -99,7 +103,7 @@ test('joined players can recover a deserted lobby or advance a reveal after a de
   const play = [
     ...lobby,
     event(alice, 'start'),
-    event(alice, 'round', { index: 0, length: 5 }),
+    event(alice, 'round', { index: 0, mask: '_____' }),
     event(alice, 'reveal', { index: 0, word: 'apple', strokes: [] }),
   ];
   const next = event(bob, 'start');
@@ -107,4 +111,26 @@ test('joined players can recover a deserted lobby or advance a reveal after a de
   assert.equal(gameFromEvents([...play, next])?.drawer, alice);
   next.origin_server_ts += 1;
   assert.equal(gameFromEvents([...play, next])?.drawer, bob);
+});
+
+test('host selects German words and timed hints reveal only their letters', () => {
+  clock = 1;
+  const events = [
+    event(alice, 'create', { rounds: 1, seconds: 60, language: 'en' }),
+    event(bob, 'settings', { language: 'de', hints: 2, customWords: ['Sonne'] }),
+    event(alice, 'settings', { language: 'de', hints: 2, customWords: ['Sonne'] }),
+    event(bob, 'join'),
+    event(alice, 'start'),
+    event(alice, 'round', { index: 0, mask: wordMask('Känguru') }),
+    event(bob, 'hint', { index: 0, position: 1, letter: 'ä' }),
+    event(alice, 'hint', { index: 0, position: 1, letter: 'ä' }),
+  ];
+  const game = gameFromEvents(events)!;
+  assert.equal(game.language, 'de');
+  assert.deepEqual(game.customWords, ['Sonne']);
+  assert.equal(game.word, '');
+  assert.equal(game.mask, '_ä_____');
+  assert.equal(game.hintCount, 1);
+  assert.ok(WORDS.de.includes('Känguru'));
+  assert.equal(normalizeGuess('Kaenguru', 'de'), normalizeGuess('Känguru', 'de'));
 });
