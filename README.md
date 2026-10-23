@@ -48,6 +48,7 @@ pnpm fmt:check
 pnpm build
 ```
 
-`pnpm build` writes the static widget to `dist/`. Run `pnpm fmt` to format the
+`pnpm build` writes a standalone `dist/index.html` with its CSS and JavaScript
+inlined. Run `pnpm fmt` to format the
 source. Source code is organized under `src/model/`, `src/drawing/`,
 `src/matrix/`, and `src/components/`.
