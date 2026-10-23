@@ -51,6 +51,8 @@ export default function App() {
     api.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
     let alive = true;
     let interval: number | undefined;
+    let contentLoadedRetry: number | undefined;
+    let connectionTimeout: number | undefined;
     let reading = false;
 
     async function refresh() {
@@ -71,18 +73,27 @@ export default function App() {
     refreshRef.current = refresh;
     api.on('ready', () => {
       if (!alive) return;
+      if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
+      if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
+      setError('');
       setConnected(true);
       void refresh();
       interval = window.setInterval(() => void refresh(), 2000);
     });
     api.start();
-    const loadedTimer = window.setTimeout(
-      () => void api.sendContentLoaded().catch(() => undefined),
-      500,
-    );
+    const notifyLoaded = () => void api.sendContentLoaded().catch(() => undefined);
+    notifyLoaded();
+    contentLoadedRetry = window.setInterval(notifyLoaded, 3000);
+    connectionTimeout = window.setTimeout(() => {
+      if (alive)
+        setError(
+          'Element did not complete the widget handshake. Check that this widget is open in a supported Matrix client and its URL includes widgetId and userId.',
+        );
+    }, 15_000);
     return () => {
       alive = false;
-      window.clearTimeout(loadedTimer);
+      if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
+      if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
       if (interval !== undefined) window.clearInterval(interval);
       api.transport.stop();
       apiRef.current = null;
