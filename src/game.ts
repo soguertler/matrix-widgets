@@ -24,6 +24,7 @@ export type Entry =
 type Action =
   | { version: 1; kind: 'create'; gameId: string }
   | { version: 1; kind: 'join'; gameId: string }
+  | { version: 1; kind: 'cancel'; gameId: string }
   | { version: 1; kind: 'start'; gameId: string; players: string[]; steps: number }
   | { version: 1; kind: 'submit'; gameId: string; round: number; entry: Entry }
   | { version: 1; kind: 'advance'; gameId: string; round: number }
@@ -75,7 +76,7 @@ function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is 
 function actionOf(event: GameEvent): Action | null {
   const content = event.content as Partial<Action>;
   if (content.version !== 1 || typeof content.gameId !== 'string') return null;
-  if (!['create', 'join', 'start', 'submit', 'advance', 'reveal'].includes(String(content.kind))) return null;
+  if (!['create', 'join', 'cancel', 'start', 'submit', 'advance', 'reveal'].includes(String(content.kind))) return null;
   return content as Action;
 }
 
@@ -111,7 +112,9 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
     if (event.origin_server_ts < created.origin_server_ts) continue;
     const action = actionOf(event);
     if (!action || action.gameId !== game.id || event.event_id === created.event_id) continue;
-    if (action.kind === 'join' && game.phase === 'lobby') {
+    if (action.kind === 'cancel' && game.phase === 'lobby' && event.sender === game.owner) {
+      return null;
+    } else if (action.kind === 'join' && game.phase === 'lobby') {
       if (!game.joined.includes(event.sender)) game.joined.push(event.sender);
     } else if (action.kind === 'start' && game.phase === 'lobby' && event.sender === game.owner) {
       const roster = action.players;

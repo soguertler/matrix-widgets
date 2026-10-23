@@ -1,4 +1,4 @@
-# Drawing Phone Matrix widget
+# Doodle Phone Matrix widget
 
 A React, TypeScript, and Tailwind drawing telephone game for a Matrix room.
 Two or three people write prompts, draw the previous player's prompt, guess the
@@ -23,7 +23,8 @@ https://your-widget-host.example/?widgetId=$matrix_widget_id&userId=$matrix_user
 The client must grant the widget permission to send and receive
 `com.local.matrix_widget_lab.doodle_phone` room events. Everyone should open
 the same widget in the same room. One player creates the lobby and starts the
-game; other players join. The host advances each round after everyone submits.
+game; other players join. The lobby shows their room names and profile pictures,
+and the host can cancel it. The host advances each round after everyone submits.
 
 The drawing pad offers a color palette, pen, eraser, line, rectangle, ellipse,
 filled shapes, brush sizes, and undo/redo. Rounds show a two-minute countdown;

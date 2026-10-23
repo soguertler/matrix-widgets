@@ -71,3 +71,16 @@ test('new lobby supersedes the completed game', () => {
   assert.equal(gameFromEvents(events)?.id, 'two');
   assert.deepEqual(gameFromEvents(events)?.joined, [bob]);
 });
+
+test('only the host can cancel the current lobby', () => {
+  counter = 0;
+  const events = [event(alice, { version: 1, kind: 'create', gameId: 'one' })];
+  events.push(event(bob, { version: 1, kind: 'cancel', gameId: 'one' }));
+  assert.equal(gameFromEvents(events)?.phase, 'lobby');
+  events.push(event(alice, { version: 1, kind: 'cancel', gameId: 'other' }));
+  assert.equal(gameFromEvents(events)?.phase, 'lobby');
+  events.push(event(alice, { version: 1, kind: 'cancel', gameId: 'one' }));
+  assert.equal(gameFromEvents(events), null);
+  events.push(event(bob, { version: 1, kind: 'create', gameId: 'two' }));
+  assert.equal(gameFromEvents(events)?.id, 'two');
+});
