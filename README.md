@@ -1,47 +1,53 @@
-# Doodle Phone Matrix widget
+# Doodle Phone
 
-A React, TypeScript, and Tailwind drawing telephone game for a Matrix room.
-Two or three people write prompts, draw the previous player's prompt, guess the
-drawing, and reveal the resulting chains. Game actions are custom Matrix room
-events sent through the Matrix Widget API.
+Matrix room widget built with React, TypeScript, and Tailwind CSS.
 
-The source is grouped by purpose: `src/model/` holds the game rules and event
-validation, `src/drawing/` holds the canvas tools, `src/matrix/` reads room
-profiles, and `src/components/` contains the lobby, round, and reveal screens.
-
-## Develop
+## Development
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open the development URL as a widget in a Matrix client that supports the
-Matrix Widget API. For a production build, run `pnpm build` and serve the
-generated `dist/` directory over HTTP. The widget URL template is:
+Add the development URL to a Matrix client with Widget API support. The widget
+URL must include these parameters:
 
 ```text
 https://your-widget-host.example/?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id
 ```
 
-The client must grant the widget permission to send and receive
-`com.local.matrix_widget_lab.doodle_phone` room events. Everyone should open
-the same widget in the same room. One player creates the lobby and starts the
-game; other players join. The lobby shows their room names and profile pictures,
-and the host can cancel it. The host advances each round after everyone submits.
+The client must grant permission to send and receive
+`com.local.matrix_widget_lab.doodle_phone` room events, receive `m.room.member`
+state events, and download profile images. All players use the same room and
+widget. The host creates and starts the game. Any player can advance a complete
+round or reveal the result. Games support two or three players.
 
-The drawing pad offers a color palette, pen, eraser, line, rectangle, ellipse,
-area fill, brush sizes, and undo/redo. Click a connected area with Fill to color
-it; shapes stay outlined. Rounds show a two-minute countdown;
-submission stays available when it reaches zero. The full-screen button uses
-the browser Fullscreen API. If the host disallows iframe full screen, it sends
-an optional layout request to a compatible Element module.
+## Protocol
 
-Game events are stored in the room and can be read by its members even if a
-client does not normally display their event type. This is a small trusted-room
-game, with no separate game server or anti-cheat. The widget reads recent room
-events through the host; if older game events are missing, revisit the room and
-load more timeline history.
+Game actions are non-state Matrix room events of type
+`com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 1`, a
+`gameId`, and a `kind` of `create`, `join`, `cancel`, `start`, `submit`, `advance`,
+or `reveal`. `src/model/game.ts` validates and reduces these events into game
+state. Room members can read the events, including prompts and drawings,
+regardless of whether their client displays them in the timeline.
 
-Run `pnpm test` for the game-state and area-fill tests, `pnpm lint` for Oxlint,
-and `pnpm fmt:check` for Oxfmt. Use `pnpm fmt` to format the source.
+The widget reads the latest 1,000 game events from the host every two seconds.
+Older events outside that window are unavailable to its reducer. The round
+timer is visual; it does not prevent late submissions or advance the game.
+
+The drawing tools store vector strokes and PNG masks for area fills in submit
+events. The full-screen button uses the browser Fullscreen API or sends a
+layout request to a compatible Element module.
+
+## Build and checks
+
+```sh
+pnpm test
+pnpm lint
+pnpm fmt:check
+pnpm build
+```
+
+`pnpm build` writes the static widget to `dist/`. Run `pnpm fmt` to format the
+source. Source code is organized under `src/model/`, `src/drawing/`,
+`src/matrix/`, and `src/components/`.

@@ -23,6 +23,7 @@ type Props = {
 export default function Playing({ game, userId, busy, send }: Props) {
   const [text, setText] = useState('');
   const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [drawingWorking, setDrawingWorking] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     setNow(Date.now());
@@ -30,7 +31,6 @@ export default function Playing({ game, userId, busy, send }: Props) {
     return () => window.clearInterval(timer);
   }, [game.roundStartedAt]);
 
-  const isOwner = game.owner === userId;
   const isPlayer = game.players.includes(userId);
   const myBook = bookOwner(game.players, userId, game.round);
   const previous = previousEntry(game, userId);
@@ -51,7 +51,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
   const clock = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   async function submitTurn() {
-    if (!isPlayer || submitted) return;
+    if (!isPlayer || submitted || drawingWorking) return;
     const entry: Entry = roundIsDrawing
       ? { kind: 'drawing', strokes }
       : { kind: 'text', text: text.trim().slice(0, 180) };
@@ -107,7 +107,11 @@ export default function Playing({ game, userId, busy, send }: Props) {
             </div>
           )}
           {roundIsDrawing ? (
-            <DrawingPad key={`${game.id}-${game.round}-${userId}`} onChange={setStrokes} />
+            <DrawingPad
+              key={`${game.id}-${game.round}-${userId}`}
+              onChange={setStrokes}
+              onWorkingChange={setDrawingWorking}
+            />
           ) : (
             <label className="block text-sm font-medium text-slate-300">
               {game.round === 0 ? 'Your opening phrase' : 'What do you think this drawing shows?'}
@@ -124,7 +128,9 @@ export default function Playing({ game, userId, busy, send }: Props) {
           )}
           <button
             className="rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
-            disabled={busy || (roundIsDrawing ? strokes.length === 0 : !text.trim())}
+            disabled={
+              busy || drawingWorking || (roundIsDrawing ? strokes.length === 0 : !text.trim())
+            }
             onClick={() => void submitTurn()}
             type="button"
           >
@@ -142,7 +148,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
           This game is in progress. You can watch the reveal when it finishes.
         </p>
       )}
-      {isOwner && complete && (
+      {isPlayer && complete && (
         <button
           className="mt-5 rounded-xl bg-violet-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
           disabled={busy}

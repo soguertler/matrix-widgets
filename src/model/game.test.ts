@@ -3,7 +3,9 @@ import test from 'node:test';
 import {
   allSubmitted,
   bookOwner,
+  gameEventBytes,
   gameFromEvents,
+  MAX_GAME_EVENT_BYTES,
   previousEntry,
   submissionKey,
   type GameAction,
@@ -248,11 +250,49 @@ test('host cannot advance before everyone submits', () => {
   assert.equal(gameFromEvents(events)?.round, 0);
 });
 
-test('new lobby supersedes the completed game', () => {
+test('new lobby cannot displace a game in progress', () => {
   const events = base();
   events.push(event(bob, { version: 1, kind: 'create', gameId: 'two' }));
-  assert.equal(gameFromEvents(events)?.id, 'two');
-  assert.deepEqual(gameFromEvents(events)?.joined, [bob]);
+  assert.equal(gameFromEvents(events)?.id, 'one');
+});
+
+test('any player can advance a completed round', () => {
+  const events = base();
+  for (const sender of [alice, bob]) {
+    events.push(
+      event(sender, {
+        version: 1,
+        kind: 'submit',
+        gameId: 'one',
+        round: 0,
+        entry: { kind: 'text', text: sender },
+      }),
+    );
+  }
+  events.push(event(bob, { version: 1, kind: 'advance', gameId: 'one', round: 0 }));
+  assert.equal(gameFromEvents(events)?.round, 1);
+});
+
+test('submission size counts the full encoded event content', () => {
+  const action: GameAction = {
+    version: 1,
+    kind: 'submit',
+    gameId: 'one',
+    round: 1,
+    entry: {
+      kind: 'drawing',
+      strokes: [
+        {
+          tool: 'fill',
+          color: '#ef4444',
+          width: 6,
+          points: [[10, 10]],
+          data: `data:image/png;base64,${'A'.repeat(MAX_GAME_EVENT_BYTES)}`,
+        },
+      ],
+    },
+  };
+  assert.ok(gameEventBytes(action) > MAX_GAME_EVENT_BYTES);
 });
 
 test('only the host can cancel the current lobby', () => {

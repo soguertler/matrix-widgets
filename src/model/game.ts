@@ -1,6 +1,7 @@
 import type { IRoomEvent } from 'matrix-widget-api';
 
 export const GAME_EVENT = 'com.local.matrix_widget_lab.doodle_phone';
+export const MAX_GAME_EVENT_BYTES = 60_000;
 export type Point = [number, number];
 export const DRAW_COLORS = [
   '#111827',
@@ -60,6 +61,10 @@ export type Game = {
   roundStartedAt: number;
   submissions: Map<string, SubmittedEntry>;
 };
+
+export function gameEventBytes(action: GameAction): number {
+  return new TextEncoder().encode(JSON.stringify(action)).length;
+}
 
 function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is Entry {
   if (!entry || typeof entry !== 'object') return false;
@@ -152,38 +157,41 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
   const events = [...input].sort(
     (a, b) => a.origin_server_ts - b.origin_server_ts || a.event_id.localeCompare(b.event_id),
   );
-  const creations = events.filter((event) => actionOf(event)?.kind === 'create');
-  const created = creations.at(-1);
-  if (!created) return null;
-  const create = actionOf(created)!;
-  const game: Game = {
-    id: create.gameId,
-    owner: created.sender,
-    phase: 'lobby',
-    joined: [created.sender],
-    players: [],
-    steps: 0,
-    round: 0,
-    roundStartedAt: 0,
-    submissions: new Map(),
-  };
+  let game: Game | null = null;
 
   for (const event of events) {
-    if (event.origin_server_ts < created.origin_server_ts) continue;
     const action = actionOf(event);
-    if (!action || action.gameId !== game.id || event.event_id === created.event_id) continue;
+    if (!action) continue;
+    if (action.kind === 'create') {
+      if (game && game.phase !== 'reveal') continue;
+      game = {
+        id: action.gameId,
+        owner: event.sender,
+        phase: 'lobby',
+        joined: [event.sender],
+        players: [],
+        steps: 0,
+        round: 0,
+        roundStartedAt: 0,
+        submissions: new Map(),
+      };
+      continue;
+    }
+    if (!game || action.gameId !== game.id) continue;
     if (action.kind === 'cancel' && game.phase === 'lobby' && event.sender === game.owner) {
-      return null;
+      game = null;
     } else if (action.kind === 'join' && game.phase === 'lobby') {
       if (!game.joined.includes(event.sender)) game.joined.push(event.sender);
     } else if (action.kind === 'start' && game.phase === 'lobby' && event.sender === game.owner) {
       const roster = action.players;
+      const joined = game.joined;
       if (
         !Array.isArray(roster) ||
         roster.length < 2 ||
         roster.length > 3 ||
         new Set(roster).size !== roster.length ||
-        !roster.every((player) => game.joined.includes(player))
+        !roster.includes(game.owner) ||
+        !roster.every((player) => joined.includes(player))
       )
         continue;
       game.players = roster;
@@ -205,7 +213,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
     } else if (
       action.kind === 'advance' &&
       game.phase === 'playing' &&
-      event.sender === game.owner &&
+      game.players.includes(event.sender) &&
       action.round === game.round
     ) {
       if (!allSubmitted(game)) continue;
@@ -216,7 +224,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
     } else if (
       action.kind === 'reveal' &&
       game.phase === 'playing' &&
-      event.sender === game.owner
+      game.players.includes(event.sender)
     ) {
       if (game.round === game.steps - 1 && allSubmitted(game)) game.phase = 'reveal';
     }

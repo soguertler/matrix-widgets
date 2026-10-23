@@ -14,7 +14,10 @@ import {
 import { DRAW_COLORS, DRAW_WIDTHS, type DrawTool, type Point, type Stroke } from '../model/game';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, fillRegion, rasterize } from './fill';
 
-type Props = { onChange: (strokes: Stroke[]) => void };
+type Props = {
+  onChange: (strokes: Stroke[]) => void;
+  onWorkingChange?: (working: boolean) => void;
+};
 const WIDTH = CANVAS_WIDTH;
 const HEIGHT = CANVAS_HEIGHT;
 const MAX_POINTS = 800;
@@ -97,7 +100,7 @@ const tools: { id: DrawTool; icon: LucideIcon; label: string }[] = [
   { id: 'fill', icon: PaintBucket, label: 'Fill area' },
 ];
 
-export default function DrawingPad({ onChange }: Props) {
+export default function DrawingPad({ onChange, onWorkingChange }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const strokesRef = useRef<Stroke[]>([]);
   const undoRef = useRef<Stroke[][]>([]);
@@ -136,6 +139,7 @@ export default function DrawingPad({ onChange }: Props) {
   function start(event: React.PointerEvent<SVGSVGElement>) {
     if (
       event.button !== 0 ||
+      fillingRef.current ||
       drawingRef.current ||
       countPoints(strokesRef.current) >= MAX_POINTS - 1
     )
@@ -162,9 +166,12 @@ export default function DrawingPad({ onChange }: Props) {
 
   async function fillAt(seed: Point) {
     fillingRef.current = true;
+    onWorkingChange?.(true);
     setFillError('');
+    const initialStrokes = strokesRef.current;
     try {
-      const canvas = await rasterize(strokesRef.current);
+      const canvas = await rasterize(initialStrokes);
+      if (strokesRef.current !== initialStrokes) return;
       const source = canvas
         .getContext('2d', { willReadFrequently: true })!
         .getImageData(0, 0, WIDTH, HEIGHT);
@@ -177,6 +184,7 @@ export default function DrawingPad({ onChange }: Props) {
         .getContext('2d')!
         .putImageData(new ImageData(new Uint8ClampedArray(mask), WIDTH, HEIGHT), 0, 0);
       const data = overlay.toDataURL('image/png');
+      if (strokesRef.current !== initialStrokes) return;
       const storedBytes = strokesRef.current.reduce(
         (sum, stroke) => sum + (isLegacy(stroke) ? 0 : (stroke.data?.length ?? 0)),
         0,
@@ -193,6 +201,7 @@ export default function DrawingPad({ onChange }: Props) {
       setFillError('Could not fill this area. Try again.');
     } finally {
       fillingRef.current = false;
+      onWorkingChange?.(false);
     }
   }
 
@@ -221,6 +230,7 @@ export default function DrawingPad({ onChange }: Props) {
   }
 
   function undo() {
+    if (fillingRef.current) return;
     const previous = undoRef.current.pop();
     if (!previous) return;
     redoRef.current.push(strokesRef.current);
@@ -228,6 +238,7 @@ export default function DrawingPad({ onChange }: Props) {
     setHistoryTick((tick) => tick + 1);
   }
   function redo() {
+    if (fillingRef.current) return;
     const next = redoRef.current.pop();
     if (!next) return;
     undoRef.current.push(strokesRef.current);
@@ -235,6 +246,7 @@ export default function DrawingPad({ onChange }: Props) {
     setHistoryTick((tick) => tick + 1);
   }
   function clear() {
+    if (fillingRef.current) return;
     if (!strokesRef.current.length) return;
     checkpoint();
     update([]);

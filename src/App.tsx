@@ -5,7 +5,14 @@ import Lobby from './components/Lobby';
 import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
 import Playing from './components/Playing';
 import Reveal from './components/Reveal';
-import { GAME_EVENT, gameFromEvents, type GameAction, type GameEvent } from './model/game';
+import {
+  GAME_EVENT,
+  gameEventBytes,
+  gameFromEvents,
+  MAX_GAME_EVENT_BYTES,
+  type GameAction,
+  type GameEvent,
+} from './model/game';
 
 function urlParam(name: string): string | null {
   const query = new URLSearchParams(window.location.search);
@@ -50,7 +57,7 @@ export default function App() {
       if (reading) return;
       reading = true;
       try {
-        const roomEvents = await api.readRoomEvents(GAME_EVENT, 100);
+        const roomEvents = await api.readRoomEvents(GAME_EVENT, 1000);
         if (alive) {
           setEvents(roomEvents);
           setError('');
@@ -85,6 +92,10 @@ export default function App() {
 
   async function send(action: GameAction): Promise<boolean> {
     if (!apiRef.current || !connected) return false;
+    if (gameEventBytes(action) > MAX_GAME_EVENT_BYTES) {
+      setError('This drawing is too large to send. Undo a fill or simplify it.');
+      return false;
+    }
     setBusy(true);
     setError('');
     try {
