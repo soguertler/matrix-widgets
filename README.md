@@ -22,6 +22,15 @@ state events, and download profile images. All players use the same room and
 widget. The host creates and starts the game. Any player can advance a complete
 round or reveal the result. Games support two or three players.
 
+## Use a release
+
+Download the [latest `index.html` release asset](https://github.com/soguertler/doodle-phone/releases/latest/download/index.html)
+and serve it from an HTTPS web host that allows embedding in your Matrix client.
+Add the hosted URL as a room widget, including the `widgetId`, `userId`, and
+`roomId` parameters shown above. Each player opens the same room widget and
+grants its requested permissions. The GitHub release URL downloads the file;
+use your hosted copy as the widget URL.
+
 ## Protocol
 
 Game actions are non-state Matrix room events of type
@@ -49,9 +58,8 @@ pnpm build
 ```
 
 `pnpm build` writes a standalone `dist/index.html` with its CSS and JavaScript
-inlined. Run `pnpm fmt` to format the
-source. Source code is organized under `src/model/`, `src/drawing/`,
-`src/matrix/`, and `src/components/`.
+inlined. Run `pnpm fmt` to format the source. Source code is organized under
+`src/model/`, `src/drawing/`, `src/matrix/`, and `src/components/`.
 
 Pushes to `main` build and publish `index.html` as a GitHub Release asset.
 The newest build is available from the repository's `releases/latest` page.
