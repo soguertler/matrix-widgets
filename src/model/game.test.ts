@@ -220,6 +220,7 @@ test('leaving during play fills remaining turns so the game can finish', () => {
   assert.deepEqual(game.submissions.get(submissionKey(1, players[0]))?.entry, {
     kind: 'drawing',
     strokes: [],
+    emptyReason: 'left',
   });
 });
 

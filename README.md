@@ -36,14 +36,16 @@ use your hosted copy as the widget URL.
 
 Game actions are non-state Matrix room events of type
 `com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 2`, a
-`gameId`, and a `kind` of `create`, `join`, `cancel`, `start`, `submit`, `expire`,
+`gameId`, and a `kind` of `create`, `join`, `leave`, `cancel`, `start`, `submit`, `expire`,
 or `revealNext`. `src/model/game.ts` validates and reduces these events into game
 state. Room members can read the events, including prompts and drawings,
 regardless of whether their client displays them in the timeline.
 
-The widget reads the latest 1,000 game events from the host every two seconds.
-Older events outside that window are unavailable to its reducer. A connected
-player's widget sends an expiry event when the round timer reaches zero.
+The widget reads recent game events from the host every two seconds. If the
+initial 1,000 events do not include the current game's creation, it requests up
+to 4,000 events. If the client cannot provide enough history, the widget shows
+an error instead of treating the room as empty. A connected player's widget
+sends an expiry event when the round timer reaches zero.
 
 The drawing tools store vector strokes and PNG masks for area fills in submit
 events. The full-screen button uses the browser Fullscreen API or sends a

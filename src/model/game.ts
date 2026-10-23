@@ -39,7 +39,9 @@ export type Stroke =
       filled?: boolean;
       data?: string;
     };
-export type Entry = { kind: 'text'; text: string } | { kind: 'drawing'; strokes: Stroke[] };
+export type Entry =
+  | { kind: 'text'; text: string }
+  | { kind: 'drawing'; strokes: Stroke[]; emptyReason?: 'left' | 'timeout' };
 
 type Action =
   | { version: 2; kind: 'create'; gameId: string }
@@ -86,6 +88,7 @@ function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is 
   const strokes = (entry as { strokes?: unknown }).strokes;
   if (
     (entry as { kind?: unknown }).kind !== 'drawing' ||
+    (entry as { emptyReason?: unknown }).emptyReason !== undefined ||
     !Array.isArray(strokes) ||
     strokes.length > 100
   )
@@ -245,7 +248,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         if (!game.submissions.has(key)) {
           const entry: Entry =
             game.round % 2 === 1
-              ? { kind: 'drawing', strokes: [] }
+              ? { kind: 'drawing', strokes: [], emptyReason: 'timeout' }
               : { kind: 'text', text: '(time ran out)' };
           game.submissions.set(key, { author: player, round: game.round, entry });
         }
@@ -284,7 +287,7 @@ function fillLeftTurns(game: Game): void {
     if (game.submissions.has(key)) continue;
     const entry: Entry =
       game.round % 2 === 1
-        ? { kind: 'drawing', strokes: [] }
+        ? { kind: 'drawing', strokes: [], emptyReason: 'left' }
         : { kind: 'text', text: '(player left)' };
     game.submissions.set(key, { author: player, round: game.round, entry });
   }

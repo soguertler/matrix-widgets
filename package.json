@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --experimental-strip-types --test src/model/*.test.ts src/drawing/*.test.ts",
+    "test": "node --experimental-strip-types --test src/model/*.test.ts src/drawing/*.test.ts src/matrix/*.test.ts",
     "fmt": "oxfmt src vite.config.ts index.html package.json tsconfig.json",
     "fmt:check": "oxfmt --check src vite.config.ts index.html package.json tsconfig.json",
     "lint": "oxlint src"

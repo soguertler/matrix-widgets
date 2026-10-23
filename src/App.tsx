@@ -8,6 +8,7 @@ import {
 import { Maximize2, Minimize2 } from 'lucide-react';
 import Lobby from './components/Lobby';
 import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
+import { readCurrentGameEvents } from './matrix/GameEvents';
 import Playing from './components/Playing';
 import Reveal from './components/Reveal';
 import {
@@ -32,10 +33,12 @@ export default function App() {
   const apiRef = useRef<WidgetApi | null>(null);
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
   const [connected, setConnected] = useState(false);
+  const [gameStateReady, setGameStateReady] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const missingSetup = window.parent === window || !widgetId || !userId;
   const [fullscreen, setFullscreen] = useState(false);
   const [maximizedInElement, setMaximizedInElement] = useState(false);
   const game = useMemo(() => gameFromEvents(events), [events]);
@@ -48,7 +51,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (window.parent === window || !widgetId || !userId) return;
+    if (missingSetup) return;
     const api = new WidgetApi(widgetId, '*');
     apiRef.current = api;
     api.requestCapabilityToSendEvent(GAME_EVENT);
@@ -65,13 +68,19 @@ export default function App() {
       if (reading) return;
       reading = true;
       try {
-        const roomEvents = await api.readRoomEvents(GAME_EVENT, 1000);
+        const roomEvents = await readCurrentGameEvents((limit) =>
+          api.readRoomEvents(GAME_EVENT, limit),
+        );
         if (alive) {
           setEvents(roomEvents);
+          setGameStateReady(true);
           setError('');
         }
       } catch (cause) {
-        if (alive) setError(`Could not read game state: ${String(cause)}`);
+        if (alive) {
+          setGameStateReady(false);
+          setError(`Could not read game state: ${String(cause)}`);
+        }
       } finally {
         reading = false;
       }
@@ -119,7 +128,7 @@ export default function App() {
       apiRef.current = null;
       refreshRef.current = null;
     };
-  }, [widgetId, userId]);
+  }, [widgetId, userId, missingSetup]);
 
   async function send(action: GameAction): Promise<boolean> {
     if (!apiRef.current || !connected) return false;
@@ -188,9 +197,11 @@ export default function App() {
           <span>
             {connected
               ? '● Ready to play'
-              : permissionDenied
-                ? '○ Permission needed'
-                : '○ Connecting…'}
+              : missingSetup
+                ? '○ Setup needed'
+                : permissionDenied
+                  ? '○ Permission needed'
+                  : '○ Connecting…'}
           </span>
           {userId && (
             <span>
@@ -200,6 +211,16 @@ export default function App() {
           )}
         </div>
 
+        {missingSetup && (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-500/50 bg-amber-950/60 p-3 text-sm text-amber-100"
+          >
+            {window.parent === window
+              ? 'Open this widget inside a Matrix room.'
+              : `The widget URL is missing ${[!widgetId && 'widgetId', !userId && 'userId'].filter(Boolean).join(' and ')}. Add the Matrix URL placeholders to the room widget URL, then reopen it.`}
+          </div>
+        )}
         {error && (
           <div
             role="alert"
@@ -208,7 +229,7 @@ export default function App() {
             {error}
           </div>
         )}
-        {(!widgetId || !userId || window.parent === window) && (
+        {missingSetup && (
           <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
             <h2 className="text-xl font-bold">Open this in a Matrix room</h2>
             <p className="mt-2 text-slate-300">
@@ -218,7 +239,7 @@ export default function App() {
           </section>
         )}
 
-        {connected && userId && !game && (
+        {connected && gameStateReady && userId && !game && (
           <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
             <h2 className="text-xl font-bold">Start a game</h2>
             <p className="mt-2 text-slate-300">

@@ -67,17 +67,15 @@ export default function Playing({ game, userId, busy, send }: Props) {
       : { kind: 'text', text: text.trim().slice(0, 180) };
     if (entry.kind === 'drawing' && entry.strokes.length === 0) return;
     if (entry.kind === 'text' && !entry.text) return;
-    const saved = await send({
+    // Keep the draft until the room timeline confirms this turn. A late event may be
+    // accepted by the client but ignored by the game after the round expires.
+    await send({
       version: 2,
       kind: 'submit',
       gameId: game.id,
       round: game.round,
       entry,
     });
-    if (saved) {
-      setText('');
-      setStrokes([]);
-    }
   }
 
   return (
