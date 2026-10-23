@@ -35,7 +35,7 @@ jobs:
             mkdir -p release
             cp packages/doodle-phone/dist/index.html release/doodle-phone.html
             cp packages/linux/dist/index.html release/linux.html
-            cp packages/linux/dist/*.bin packages/linux/dist/*.wasm packages/linux/dist/icon.svg packages/linux/dist/fetch packages/linux/dist/micropython packages/linux/dist/micropython-LICENSE.txt release/
+            cp packages/linux/dist/*.bin packages/linux/dist/*.wasm packages/linux/dist/icon.svg packages/linux/dist/widgetfetch packages/linux/dist/micropython packages/linux/dist/micropython-LICENSE.txt release/
             gh release create "$tag" release/* \
               --target "$GITHUB_SHA" \
               --title "Widget Games ${GITHUB_SHA::7}" \

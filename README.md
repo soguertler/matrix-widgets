@@ -47,11 +47,13 @@ in the xterm.js terminal. The widget sets the guest hostname to
 `widget-linux`, requests a DHCP lease, and offers upload/download controls for
 files in `/mnt`. The Ctrl+C, Ctrl+D, and Ctrl+L buttons send those keys to the
 guest terminal. The boot sequence clears its setup output and runs the included
-static 32-bit `fetch` system info command. Its source is in
-`packages/linux/guest/fetch.c`; rebuild it on Linux with 32-bit libc
-development files using `sh packages/linux/scripts/build-fetch.sh`. The guest
+static 32-bit `widgetfetch` system info command, also available as `fetch`. Its source is in
+`packages/linux/guest/widgetfetch.c`; rebuild it on Linux with 32-bit libc
+development files using `sh packages/linux/scripts/build-widgetfetch.sh`. The guest
 also includes the static 32-bit minimal Unix build of MicroPython 1.29.0.
-Run `micropython` for its REPL or `micropython -c 'print(6 * 7)'` for a command.
+Run `micropython` or its `python` alias for the REPL, or use
+`python -c 'print(6 * 7)'` for a command. Press Ctrl+D to exit the REPL;
+the minimal MicroPython build does not provide `exit()`.
 The build recipe is `packages/linux/scripts/build-micropython.sh`, and its
 upstream license is included with the binary. Networking uses v86's browser `fetch` backend, so HTTP access
 depends on browser CORS rules; it is not unrestricted network access. Restart
@@ -67,7 +69,7 @@ Add the hosted URL as a room widget, including the parameters shown above. The
 GitHub release URL downloads the file; it is not a widget hosting URL.
 
 The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
-`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `fetch`, `micropython`, and
+`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `widgetfetch`, `micropython`, and
 `micropython-LICENSE.txt`. Host these files together
 on an HTTPS origin that allows iframe embedding. The Linux widget does not
 need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix

@@ -51,7 +51,7 @@ const downloadButton = downloadForm.querySelector<HTMLButtonElement>('button')!;
 const fileStatus = document.querySelector<HTMLElement>('#file-status')!;
 
 let emulator: V86 | undefined;
-let fetchBytes: Uint8Array | undefined;
+let widgetfetchBytes: Uint8Array | undefined;
 let micropythonBytes: Uint8Array | undefined;
 let booting = false;
 let ready = false;
@@ -72,14 +72,14 @@ function setStatus(message: string) {
 
 async function configureGuest() {
   const active = emulator;
-  if (!active || !fetchBytes || !micropythonBytes) return;
+  if (!active || !widgetfetchBytes || !micropythonBytes) return;
   setStatus('Configuring Widget Linux…');
   try {
-    await active.create_file('/fetch', fetchBytes);
+    await active.create_file('/widgetfetch', widgetfetchBytes);
     await active.create_file('/micropython', micropythonBytes);
     if (active !== emulator) return;
     active.serial0_send(
-      `hostname widget-linux; udhcpc -i eth0 -q -n -t 3 -T 2; cp /mnt/fetch /usr/bin/fetch; cp /mnt/micropython /usr/bin/micropython; chmod +x /usr/bin/fetch /usr/bin/micropython; export TERM=xterm; ${finishSetup}; fetch\n`,
+      `hostname widget-linux; udhcpc -i eth0 -q -n -t 3 -T 2; cp /mnt/widgetfetch /usr/bin/widgetfetch; cp /mnt/micropython /usr/bin/micropython; chmod +x /usr/bin/widgetfetch /usr/bin/micropython; ln -sf widgetfetch /usr/bin/fetch; ln -sf micropython /usr/bin/python; export TERM=xterm; ${finishSetup}; widgetfetch\n`,
     );
   } catch (error) {
     fileStatus.textContent = `Could not install guest commands: ${String(error)}`;
@@ -148,14 +148,14 @@ async function boot() {
   }
 
   try {
-    const [fetchResponse, micropythonResponse] = await Promise.all([
-      window.fetch(asset('fetch')),
+    const [widgetfetchResponse, micropythonResponse] = await Promise.all([
+      window.fetch(asset('widgetfetch')),
       window.fetch(asset('micropython')),
     ]);
-    if (!fetchResponse.ok || !micropythonResponse.ok) {
+    if (!widgetfetchResponse.ok || !micropythonResponse.ok) {
       throw new Error('Could not load guest commands');
     }
-    fetchBytes = new Uint8Array(await fetchResponse.arrayBuffer());
+    widgetfetchBytes = new Uint8Array(await widgetfetchResponse.arrayBuffer());
     micropythonBytes = new Uint8Array(await micropythonResponse.arrayBuffer());
     emulator = new V86({
       wasm_path: asset('v86.wasm'),

@@ -23,7 +23,7 @@ int main(void) {
     struct utsname system;
     struct sysinfo resources;
     if (uname(&system) != 0 || sysinfo(&resources) != 0) {
-        fputs("fetch: could not read system information\n", stderr);
+        fputs("widgetfetch: could not read system information\n", stderr);
         return 1;
     }
 
