@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { WidgetApi } from 'matrix-widget-api';
+import { MatrixCapabilities, WidgetApi } from 'matrix-widget-api';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import Lobby from './Lobby';
-import { displayName, usePlayerProfiles } from './PlayerProfiles';
-import Playing from './Playing';
-import Reveal from './Reveal';
-import { GAME_EVENT, gameFromEvents, type GameAction, type GameEvent } from './game';
+import Lobby from './components/Lobby';
+import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
+import Playing from './components/Playing';
+import Reveal from './components/Reveal';
+import { GAME_EVENT, gameFromEvents, type GameAction, type GameEvent } from './model/game';
 
 function urlParam(name: string): string | null {
   const query = new URLSearchParams(window.location.search);
@@ -34,7 +34,6 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', syncFullscreen);
   }, []);
 
-
   useEffect(() => {
     if (window.parent === window || !widgetId || !userId) return;
     const api = new WidgetApi(widgetId, '*');
@@ -42,6 +41,7 @@ export default function App() {
     api.requestCapabilityToSendEvent(GAME_EVENT);
     api.requestCapabilityToReceiveEvent(GAME_EVENT);
     api.requestCapabilityToReceiveState('m.room.member');
+    api.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
     let alive = true;
     let interval: number | undefined;
     let reading = false;
@@ -55,7 +55,6 @@ export default function App() {
           setEvents(roomEvents);
           setError('');
         }
-
       } catch (cause) {
         if (alive) setError(`Could not read game state: ${String(cause)}`);
       } finally {
@@ -70,7 +69,10 @@ export default function App() {
       interval = window.setInterval(() => void refresh(), 2000);
     });
     api.start();
-    const loadedTimer = window.setTimeout(() => void api.sendContentLoaded().catch(() => undefined), 500);
+    const loadedTimer = window.setTimeout(
+      () => void api.sendContentLoaded().catch(() => undefined),
+      500,
+    );
     return () => {
       alive = false;
       window.clearTimeout(loadedTimer);
@@ -80,7 +82,6 @@ export default function App() {
       refreshRef.current = null;
     };
   }, [widgetId, userId]);
-
 
   async function send(action: GameAction): Promise<boolean> {
     if (!apiRef.current || !connected) return false;
@@ -124,39 +125,84 @@ export default function App() {
     <main className="min-h-screen bg-slate-950 p-4 text-slate-100 sm:p-6">
       <div className="mx-auto max-w-3xl space-y-5">
         <header className="rounded-2xl bg-gradient-to-br from-violet-700 via-fuchsia-700 to-rose-600 p-5 shadow-lg sm:p-7">
-          <button type="button" className="float-right flex items-center gap-2 rounded-lg bg-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/30" onClick={() => void toggleFullscreen()}>
+          <button
+            type="button"
+            className="float-right flex items-center gap-2 rounded-lg bg-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/30"
+            onClick={() => void toggleFullscreen()}
+          >
             {fullscreen || maximizedInElement ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
             {fullscreen || maximizedInElement ? 'Restore' : 'Full screen'}
           </button>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">Matrix room game</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/75">
+            Matrix room game
+          </p>
           <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">Doodle Phone</h1>
-          <p className="mt-2 text-sm text-white/85">Write it. Draw it. Guess it. See how the story changes.</p>
+          <p className="mt-2 text-sm text-white/85">
+            Write it. Draw it. Guess it. See how the story changes.
+          </p>
         </header>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-300">
           <span>{connected ? '● Connected to Element' : '○ Waiting for Element'}</span>
-          {userId && <span>Playing as <strong className="text-white">{members[userId]?.name ?? displayName(userId)}</strong></span>}
+          {userId && (
+            <span>
+              Playing as{' '}
+              <strong className="text-white">{members[userId]?.name ?? displayName(userId)}</strong>
+            </span>
+          )}
         </div>
 
-        {error && <div role="alert" className="rounded-xl border border-rose-500/50 bg-rose-950/60 p-3 text-sm text-rose-100">{error}</div>}
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/50 bg-rose-950/60 p-3 text-sm text-rose-100"
+          >
+            {error}
+          </div>
+        )}
         {(!widgetId || !userId || window.parent === window) && (
           <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
             <h2 className="text-xl font-bold">Open this in Element</h2>
-            <p className="mt-2 text-slate-300">Add this page as a widget in a Matrix room. The room supplies the widget and player IDs.</p>
+            <p className="mt-2 text-slate-300">
+              Add this page as a widget in a Matrix room. The room supplies the widget and player
+              IDs.
+            </p>
           </section>
         )}
 
         {connected && userId && !game && (
           <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
             <h2 className="text-xl font-bold">Start a game</h2>
-            <p className="mt-2 text-slate-300">Everyone opens the same room widget. Create a lobby, then invite at least one other player.</p>
-            <button className="mt-5 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 hover:bg-emerald-300 disabled:opacity-50" disabled={busy} onClick={() => void send({ version: 1, kind: 'create', gameId: crypto.randomUUID() })} type="button">Create lobby</button>
+            <p className="mt-2 text-slate-300">
+              Everyone opens the same room widget. Create a lobby, then invite at least one other
+              player.
+            </p>
+            <button
+              className="mt-5 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void send({ version: 1, kind: 'create', gameId: crypto.randomUUID() })}
+              type="button"
+            >
+              Create lobby
+            </button>
           </section>
         )}
 
-        {game?.phase === 'lobby' && userId && <Lobby game={game} userId={userId} connected={connected} busy={busy} members={members} avatarUrls={avatarUrls} send={send} />}
+        {game?.phase === 'lobby' && userId && (
+          <Lobby
+            game={game}
+            userId={userId}
+            connected={connected}
+            busy={busy}
+            members={members}
+            avatarUrls={avatarUrls}
+            send={send}
+          />
+        )}
 
-        {game?.phase === 'playing' && userId && <Playing key={game.id} game={game} userId={userId} busy={busy} send={send} />}
+        {game?.phase === 'playing' && userId && (
+          <Playing key={game.id} game={game} userId={userId} busy={busy} send={send} />
+        )}
         {game?.phase === 'reveal' && <Reveal game={game} busy={busy} send={send} />}
       </div>
     </main>

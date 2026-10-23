@@ -5,6 +5,10 @@ Two or three people write prompts, draw the previous player's prompt, guess the
 drawing, and reveal the resulting chains. Game actions are custom Matrix room
 events sent through the Matrix Widget API.
 
+The source is grouped by purpose: `src/model/` holds the game rules and event
+validation, `src/drawing/` holds the canvas tools, `src/matrix/` reads room
+profiles, and `src/components/` contains the lobby, round, and reveal screens.
+
 ## Develop
 
 ```sh
@@ -27,7 +31,8 @@ game; other players join. The lobby shows their room names and profile pictures,
 and the host can cancel it. The host advances each round after everyone submits.
 
 The drawing pad offers a color palette, pen, eraser, line, rectangle, ellipse,
-filled shapes, brush sizes, and undo/redo. Rounds show a two-minute countdown;
+area fill, brush sizes, and undo/redo. Click a connected area with Fill to color
+it; shapes stay outlined. Rounds show a two-minute countdown;
 submission stays available when it reaches zero. The full-screen button uses
 the browser Fullscreen API. If the host disallows iframe full screen, it sends
 an optional layout request to a compatible Element module.
@@ -38,4 +43,5 @@ game, with no separate game server or anti-cheat. The widget reads recent room
 events through the host; if older game events are missing, revisit the room and
 load more timeline history.
 
-Run `pnpm test` for the game-state tests.
+Run `pnpm test` for the game-state and area-fill tests, `pnpm lint` for Oxlint,
+and `pnpm fmt:check` for Oxfmt. Use `pnpm fmt` to format the source.
