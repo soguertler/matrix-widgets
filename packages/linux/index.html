@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linux terminal</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Browser Linux</p>
+          <h1>Linux terminal</h1>
+          <p class="subtitle">A small Buildroot system running locally in this browser tab.</p>
+        </div>
+        <div class="actions">
+          <span id="status" role="status">Ready to boot</span>
+          <button id="power" type="button">Boot Linux</button>
+          <button id="restart" type="button" hidden>Restart</button>
+        </div>
+      </header>
+      <section class="terminal-card" aria-label="Linux terminal">
+        <div class="terminal-top"><span>ttyS0</span><span>v86 · 32-bit x86</span></div>
+        <pre id="terminal" tabindex="0" aria-label="Terminal output">
+Press “Boot Linux” to start. Downloads about 13 MB of emulator and system files.</pre>
+        <form id="command-form" autocomplete="off">
+          <label for="command">$</label>
+          <input id="command" type="text" spellcheck="false" aria-label="Linux command" disabled />
+          <button type="submit" disabled>Send</button>
+        </form>
+      </section>
+      <p class="hint">
+        Try <code>uname -a</code>, <code>ls /</code>, or <code>help</code>. Files live only in this
+        tab and disappear when you restart.
+      </p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

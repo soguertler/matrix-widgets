@@ -26,7 +26,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test && pnpm lint && pnpm fmt:check && pnpm build
-      - name: Publish standalone game HTML
+      - name: Publish widget assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -34,9 +34,11 @@ jobs:
           if ! gh release view "$tag" >/dev/null 2>&1; then
             mkdir -p release
             cp packages/doodle-phone/dist/index.html release/doodle-phone.html
-            gh release create "$tag" release/doodle-phone.html \
+            cp packages/linux/dist/index.html release/linux.html
+            cp packages/linux/dist/*.bin packages/linux/dist/*.wasm release/
+            gh release create "$tag" release/* \
               --target "$GITHUB_SHA" \
               --title "Widget Games ${GITHUB_SHA::7}" \
-              --notes "Standalone Doodle Phone widget build from ${GITHUB_SHA}." \
+              --notes "Doodle Phone and Linux widget builds from ${GITHUB_SHA}. Serve linux.html with its .bin and .wasm assets in the same directory." \
               --latest
           fi

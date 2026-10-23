@@ -1,11 +1,13 @@
 # Widget Games
 
-pnpm workspace for Matrix room game widgets. The current game is Doodle Phone, a
-React, TypeScript, and Tailwind CSS telephone drawing game.
+pnpm workspace for Matrix room widgets. Doodle Phone is a React, TypeScript,
+and Tailwind CSS telephone drawing game. Linux Terminal runs a small Linux
+system locally in the browser using v86.
 
 ## Packages
 
 - `packages/doodle-phone`: widget app, game rules, drawing tools, and UI.
+- `packages/linux`: browser Linux terminal backed by v86 and Buildroot.
 - `packages/widget-shared`: Matrix Widget API room-event connection, room member
   profiles, and widget URL parameters for future games.
 - `packages/tsconfig`: shared TypeScript config based on the `sbomtrak` workspace's
@@ -37,12 +39,25 @@ sets a one-, two-, or three-minute timer. Rounds advance when everyone submits;
 missing turns are marked as timed out. Players can export each story as a PNG.
 Unsubmitted turns are saved in the browser tab's session storage.
 
+Run `pnpm --filter @widget-games/linux dev` to serve the Linux widget at
+`http://127.0.0.1:5174`. It has no Matrix permissions or shared state; each
+participant gets a separate Linux instance in their own browser tab. Click
+**Boot Linux** to download and start the emulator, then enter shell commands
+in the input below the terminal. Restart discards the instance's files. The
+host must permit WebAssembly and serve the `.wasm` and `.bin` files from the
+same directory as the HTML.
+
 ## Use a release
 
 Download the [latest `doodle-phone.html` release asset](https://github.com/soguertler/widget-games/releases/latest/download/doodle-phone.html)
 and serve it from an HTTPS host that allows embedding in your Matrix client.
 Add the hosted URL as a room widget, including the parameters shown above. The
 GitHub release URL downloads the file; it is not a widget hosting URL.
+
+The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
+`vgabios.bin`, and `buildroot-bzimage68.bin`. Host those five files together
+on an HTTPS origin that allows iframe embedding. The Linux widget does not
+need Matrix URL parameters or room-event permission.
 
 ## Protocol
 
@@ -69,5 +84,10 @@ pnpm build
 ```
 
 `pnpm build` writes a standalone `packages/doodle-phone/dist/index.html` with
-inlined CSS and JavaScript. Run `pnpm fmt` to format the workspace. Pushes to
-`main` publish that file as the `doodle-phone.html` asset in a GitHub Release.
+inlined CSS and JavaScript. It also writes `packages/linux/dist/index.html`
+with inlined CSS and JavaScript plus four binary assets. The Linux build
+downloads the [v86 Buildroot image](https://github.com/copy/v86) and BIOS
+files from the project's hosts and verifies their SHA-256 hashes. It copies
+the pinned v86 npm package's WebAssembly file and verifies its hash too. Run
+`pnpm fmt` to format the workspace. Pushes to `main` publish both widgets and
+the Linux assets in a GitHub Release.

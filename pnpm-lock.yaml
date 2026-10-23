@@ -106,6 +106,25 @@ importers:
         specifier: 'catalog:'
         version: 2.3.4(rollup@4.65.0)(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
 
+  packages/linux:
+    dependencies:
+      v86:
+        specifier: 0.5.472
+        version: 0.5.472
+    devDependencies:
+      '@widget-games/tsconfig':
+        specifier: workspace:^
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: 6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)
+      vite-plugin-singlefile:
+        specifier: 'catalog:'
+        version: 2.3.4(rollup@4.65.0)(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
+
   packages/tsconfig:
     devDependencies:
       '@tsconfig/strictest':
@@ -1172,6 +1191,9 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  v86@0.5.472:
+    resolution: {integrity: sha512-x2uw/IeJvIxSelkHvM3BzfhJ0KQOo3fFEOyMxIiOjMeCZFrR+UYwJ44/swRabcP/5QL1hBimUewpRPYWOwFI0A==}
+
   vite-plugin-singlefile@2.3.4:
     resolution: {integrity: sha512-1FAhlTCL6KJDpSUudrVU+gspapvS+tmKCg70vwNaAU6tyXn3E/C6+NnwQIze06byhBRv7VggZ78K0h+J/Rsdrg==}
     engines: {node: '>18.0.0'}
@@ -2031,6 +2053,8 @@ snapshots:
       browserslist: 4.29.4
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  v86@0.5.472: {}
 
   vite-plugin-singlefile@2.3.4(rollup@4.65.0)(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0)):
     dependencies:
