@@ -1,24 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  EventDirection,
-  MatrixCapabilities,
-  WidgetApi,
-  WidgetEventCapability,
-} from 'matrix-widget-api';
+import { useEffect, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import Lobby from './components/Lobby';
 import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
-import { readCurrentGameEvents } from './matrix/GameEvents';
+import { useMatrixGame } from './matrix/useMatrixGame';
 import Playing from './components/Playing';
 import Reveal from './components/Reveal';
-import {
-  GAME_EVENT,
-  gameEventBytes,
-  gamesFromEvents,
-  MAX_GAME_EVENT_BYTES,
-  type GameAction,
-  type GameEvent,
-} from './model/game';
+import { gamesFromEvents } from './model/game';
 
 function urlParam(name: string): string | null {
   const query = new URLSearchParams(window.location.search);
@@ -30,128 +17,22 @@ export default function App() {
   const widgetId = useMemo(() => urlParam('widgetId'), []);
   const userId = useMemo(() => urlParam('userId'), []);
   const roomId = useMemo(() => urlParam('roomId'), []);
-  const apiRef = useRef<WidgetApi | null>(null);
-  const refreshRef = useRef<(() => Promise<void>) | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [gameStateReady, setGameStateReady] = useState(false);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const missingSetup = window.parent === window || !widgetId || !userId;
+  const { api, connected, gameStateReady, permissionDenied, events, busy, error, setError, send } =
+    useMatrixGame(widgetId, !missingSetup);
   const [fullscreen, setFullscreen] = useState(false);
   const [maximizedInElement, setMaximizedInElement] = useState(false);
   const [viewPrevious, setViewPrevious] = useState(false);
   const { current: game, previousReveal } = useMemo(() => gamesFromEvents(events), [events]);
   const showingPrevious =
     viewPrevious && previousReveal && game?.phase !== 'playing' && game?.phase !== 'reveal';
-  const { members, avatarUrls } = usePlayerProfiles(apiRef.current, connected, game);
+  const { members, avatarUrls } = usePlayerProfiles(api, connected, game);
 
   useEffect(() => {
     const syncFullscreen = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', syncFullscreen);
     return () => document.removeEventListener('fullscreenchange', syncFullscreen);
   }, []);
-
-  useEffect(() => {
-    if (missingSetup) return;
-    const api = new WidgetApi(widgetId, '*');
-    apiRef.current = api;
-    api.requestCapabilityToSendEvent(GAME_EVENT);
-    api.requestCapabilityToReceiveEvent(GAME_EVENT);
-    api.requestCapabilityToReceiveState('m.room.member');
-    api.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
-    let alive = true;
-    let interval: number | undefined;
-    let contentLoadedRetry: number | undefined;
-    let connectionTimeout: number | undefined;
-    let reading = false;
-
-    async function refresh() {
-      if (reading) return;
-      reading = true;
-      try {
-        const roomEvents = await readCurrentGameEvents((limit) =>
-          api.readRoomEvents(GAME_EVENT, limit),
-        );
-        if (alive) {
-          setEvents(roomEvents);
-          setGameStateReady(true);
-          setError('');
-        }
-      } catch (cause) {
-        if (alive) {
-          setGameStateReady(false);
-          setError(`Could not read game state: ${String(cause)}`);
-        }
-      } finally {
-        reading = false;
-      }
-    }
-    refreshRef.current = refresh;
-    api.on('ready', () => {
-      if (!alive) return;
-      if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
-      if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
-      const canSend = api.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Send, GAME_EVENT).raw,
-      );
-      const canReceive = api.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Receive, GAME_EVENT).raw,
-      );
-      if (!canSend || !canReceive) {
-        setPermissionDenied(true);
-        setError(
-          'The Matrix client did not grant permission to send and receive game events. Review this widget’s permissions in your client, then reopen it.',
-        );
-        return;
-      }
-      setPermissionDenied(false);
-      setError('');
-      setConnected(true);
-      void refresh();
-      interval = window.setInterval(() => void refresh(), 2000);
-    });
-    api.start();
-    const notifyLoaded = () => void api.sendContentLoaded().catch(() => undefined);
-    notifyLoaded();
-    contentLoadedRetry = window.setInterval(notifyLoaded, 3000);
-    connectionTimeout = window.setTimeout(() => {
-      if (alive)
-        setError(
-          'The Matrix client did not complete the widget handshake. Check that the widget URL includes widgetId and userId.',
-        );
-    }, 15_000);
-    return () => {
-      alive = false;
-      if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
-      if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
-      if (interval !== undefined) window.clearInterval(interval);
-      api.transport.stop();
-      apiRef.current = null;
-      refreshRef.current = null;
-    };
-  }, [widgetId, userId, missingSetup]);
-
-  async function send(action: GameAction): Promise<boolean> {
-    if (!apiRef.current || !connected) return false;
-    if (gameEventBytes(action) > MAX_GAME_EVENT_BYTES) {
-      setError('This drawing is too large to send. Undo a fill or simplify it.');
-      return false;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      await apiRef.current.sendRoomEvent(GAME_EVENT, action);
-      await refreshRef.current?.();
-      return true;
-    } catch (cause) {
-      setError(`Could not save turn: ${String(cause)}`);
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function toggleFullscreen() {
     if (document.fullscreenElement) {
@@ -214,16 +95,6 @@ export default function App() {
           )}
         </div>
 
-        {missingSetup && (
-          <div
-            role="alert"
-            className="rounded-xl border border-amber-500/50 bg-amber-950/60 p-3 text-sm text-amber-100"
-          >
-            {window.parent === window
-              ? 'Open this widget inside a Matrix room.'
-              : `The widget URL is missing ${[!widgetId && 'widgetId', !userId && 'userId'].filter(Boolean).join(' and ')}. Add the Matrix URL placeholders to the room widget URL, then reopen it.`}
-          </div>
-        )}
         {error && (
           <div
             role="alert"
@@ -233,11 +104,12 @@ export default function App() {
           </div>
         )}
         {missingSetup && (
-          <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
+          <section role="alert" className="rounded-2xl border border-amber-500/50 bg-slate-900 p-5">
             <h2 className="text-xl font-bold">Open this in a Matrix room</h2>
             <p className="mt-2 text-slate-300">
-              Add this page as a widget in a Matrix room. The room supplies the widget and player
-              IDs.
+              {window.parent === window
+                ? 'Add this page as a room widget and open it inside your Matrix client.'
+                : `The widget URL is missing ${[!widgetId && 'widgetId', !userId && 'userId'].filter(Boolean).join(' and ')}. Add the Matrix URL placeholders to the room widget URL, then reopen it.`}
             </p>
           </section>
         )}
