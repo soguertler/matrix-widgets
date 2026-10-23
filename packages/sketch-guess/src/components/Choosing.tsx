@@ -8,6 +8,7 @@ export default function Choosing({
   choices,
   busy,
   liveConnected,
+  secondsLeft,
   onChoose,
 }: {
   game: Game;
@@ -16,12 +17,13 @@ export default function Choosing({
   choices: string[];
   busy: boolean;
   liveConnected: boolean;
+  secondsLeft: number;
   onChoose: (word: string) => void;
 }) {
   return (
     <section className="rounded-2xl bg-slate-900 p-5">
       <h2 className="text-xl font-bold">
-        Round {game.index + 1} / {game.rounds * game.players.length}
+        Round {game.index + 1} / {game.rounds * game.players.length} · Choose in {secondsLeft}s
       </h2>
       {isDrawer ? (
         <>

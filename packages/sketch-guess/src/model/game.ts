@@ -50,17 +50,49 @@ export const WORDS = [
 
 export type Point = { x: number; y: number };
 export type Stroke = { id: string; color: string; width: number; points: Point[] };
+export function isStroke(value: unknown): value is Stroke {
+  if (!value || typeof value !== 'object') return false;
+  const stroke = value as Record<string, unknown>;
+  return (
+    typeof stroke.id === 'string' &&
+    stroke.id.length <= 100 &&
+    typeof stroke.color === 'string' &&
+    /^#[0-9a-f]{6}$/i.test(stroke.color) &&
+    typeof stroke.width === 'number' &&
+    stroke.width >= 1 &&
+    stroke.width <= 50 &&
+    Array.isArray(stroke.points) &&
+    stroke.points.length > 0 &&
+    stroke.points.length <= 300 &&
+    stroke.points.every((point: unknown) => {
+      if (!point || typeof point !== 'object') return false;
+      const p = point as Record<string, unknown>;
+      return (
+        typeof p.x === 'number' &&
+        Number.isFinite(p.x) &&
+        p.x >= 0 &&
+        p.x <= 800 &&
+        typeof p.y === 'number' &&
+        Number.isFinite(p.y) &&
+        p.y >= 0 &&
+        p.y <= 500
+      );
+    })
+  );
+}
 type Action =
   | { kind: 'create'; gameId: string; rounds: number; seconds: number }
   | { kind: 'join' | 'leave' | 'cancel' | 'start'; gameId: string }
   | { kind: 'round'; gameId: string; index: number; length: number }
   | { kind: 'solve'; gameId: string; index: number; player: string; points: number }
   | { kind: 'expire'; gameId: string; index: number }
+  | { kind: 'skip'; gameId: string; index: number }
   | { kind: 'reveal'; gameId: string; index: number; word: string; strokes: Stroke[] };
 
 export type Game = {
   id: string;
   host: string;
+  createdAt: number;
   players: string[];
   rounds: number;
   seconds: number;
@@ -68,6 +100,8 @@ export type Game = {
   index: number;
   drawer: string | null;
   startedAt: number;
+  choosingAt: number;
+  revealedAt: number;
   length: number;
   word: string;
   strokes: Stroke[];
@@ -103,10 +137,10 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
     const action = event.content;
     if (action.kind === 'create') {
       if (
-        typeof action.rounds !== 'number' ||
+        !Number.isInteger(action.rounds) ||
         action.rounds < 1 ||
         action.rounds > 5 ||
-        typeof action.seconds !== 'number' ||
+        !Number.isInteger(action.seconds) ||
         action.seconds < 30 ||
         action.seconds > 180
       )
@@ -115,6 +149,7 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       game = {
         id: action.gameId,
         host: event.sender,
+        createdAt: event.origin_server_ts,
         players: [event.sender],
         rounds: action.rounds,
         seconds: action.seconds,
@@ -122,6 +157,8 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
         index: -1,
         drawer: null,
         startedAt: 0,
+        choosingAt: 0,
+        revealedAt: 0,
         length: 0,
         word: '',
         strokes: [],
@@ -142,7 +179,12 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
     } else if (action.kind === 'leave' && game.phase === 'lobby' && event.sender !== game.host) {
       game.players = game.players.filter((id) => id !== event.sender);
       delete game.scores[event.sender];
-    } else if (action.kind === 'cancel' && event.sender === game.host && game.phase === 'lobby') {
+    } else if (
+      action.kind === 'cancel' &&
+      game.phase === 'lobby' &&
+      (event.sender === game.host ||
+        (game.players.includes(event.sender) && event.origin_server_ts >= game.createdAt + 120_000))
+    ) {
       game.phase = 'finished';
     } else if (
       action.kind === 'start' &&
@@ -153,6 +195,20 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       game.phase = 'choosing';
       game.index = 0;
       game.drawer = game.players[0] ?? null;
+      game.choosingAt = event.origin_server_ts;
+    } else if (
+      action.kind === 'skip' &&
+      game.phase === 'choosing' &&
+      game.players.includes(event.sender) &&
+      action.index === game.index &&
+      event.origin_server_ts >= game.choosingAt + 30_000
+    ) {
+      game.index += 1;
+      if (game.index >= game.rounds * game.players.length) game.phase = 'finished';
+      else {
+        game.drawer = game.players[game.index % game.players.length] ?? null;
+        game.choosingAt = event.origin_server_ts;
+      }
     } else if (
       action.kind === 'round' &&
       game.phase === 'choosing' &&
@@ -164,6 +220,7 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
     ) {
       game.phase = 'drawing';
       game.startedAt = event.origin_server_ts;
+      game.revealedAt = 0;
       game.length = action.length;
       game.word = '';
       game.strokes = [];
@@ -189,9 +246,13 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       event.sender === game.drawer &&
       action.index === game.index &&
       typeof action.word === 'string' &&
-      Array.isArray(action.strokes)
+      action.word.length <= 40 &&
+      Array.isArray(action.strokes) &&
+      action.strokes.length <= 150 &&
+      action.strokes.every(isStroke)
     ) {
       game.phase = 'reveal';
+      game.revealedAt = event.origin_server_ts;
       game.word = action.word;
       game.strokes = action.strokes;
     } else if (
@@ -202,14 +263,21 @@ export function gameFromEvents(events: RoomEvent[]): Game | null {
       event.origin_server_ts >= game.startedAt + game.seconds * 1000 + 5000
     ) {
       game.phase = 'reveal';
+      game.revealedAt = event.origin_server_ts;
       game.word = '(drawer disconnected)';
       game.strokes = [];
-    } else if (action.kind === 'start' && game.phase === 'reveal' && event.sender === game.host) {
+    } else if (
+      action.kind === 'start' &&
+      game.phase === 'reveal' &&
+      (event.sender === game.host ||
+        (game.players.includes(event.sender) && event.origin_server_ts >= game.revealedAt + 5000))
+    ) {
       game.index += 1;
       if (game.index >= game.rounds * game.players.length) game.phase = 'finished';
       else {
         game.phase = 'choosing';
         game.drawer = game.players[game.index % game.players.length] ?? null;
+        game.choosingAt = event.origin_server_ts;
       }
     }
   }

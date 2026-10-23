@@ -8,6 +8,7 @@ export default function Lobby({
   members,
   avatarUrls,
   busy,
+  canCancel,
   onAction,
 }: {
   game: Game;
@@ -15,6 +16,7 @@ export default function Lobby({
   members: Record<string, MemberProfile>;
   avatarUrls: Record<string, string>;
   busy: boolean;
+  canCancel: boolean;
   onAction: (kind: string) => void;
 }) {
   return (
@@ -65,14 +67,16 @@ export default function Lobby({
             >
               <Play size={16} /> Start
             </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction('cancel')}
-              className="rounded-lg bg-slate-700 px-4 py-2"
-            >
-              Cancel
-            </button>
           </>
+        )}
+        {canCancel && (
+          <button
+            disabled={busy}
+            onClick={() => onAction('cancel')}
+            className="rounded-lg bg-slate-700 px-4 py-2"
+          >
+            Cancel
+          </button>
         )}
       </div>
     </section>

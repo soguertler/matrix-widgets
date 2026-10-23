@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Room, RoomEvent, type RemoteParticipant } from 'livekit-client';
 import type { WidgetApi } from 'matrix-widget-api';
 import { widgetUrlParam } from '@widget-games/widget-shared';
-import type { Stroke } from '../model/game';
+import { isStroke, type Stroke } from '../model/game';
 
 export type Packet =
   | { kind: 'presence'; player: string }
   | { kind: 'stroke'; stroke: Stroke; index: number }
+  | { kind: 'draft'; stroke: Stroke; index: number }
   | { kind: 'clear'; index: number }
   | { kind: 'guess'; player: string; guess: string; index: number }
   | { kind: 'chat'; player: string; guess: string; index: number }
@@ -15,6 +16,28 @@ export type Packet =
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const memberId = crypto.randomUUID();
+
+function parsePacket(data: Uint8Array): Packet | null {
+  if (data.byteLength > 16_000) return null;
+  const packet: unknown = JSON.parse(decoder.decode(data));
+  if (!packet || typeof packet !== 'object') return null;
+  const value = packet as Record<string, unknown>;
+  if (value.kind === 'presence')
+    return typeof value.player === 'string' ? (packet as Packet) : null;
+  if (!Number.isInteger(value.index)) return null;
+  if (value.kind === 'clear' || value.kind === 'sync') return packet as Packet;
+  if (value.kind === 'guess' || value.kind === 'chat') {
+    return typeof value.player === 'string' &&
+      typeof value.guess === 'string' &&
+      value.guess.length <= 80
+      ? (packet as Packet)
+      : null;
+  }
+  if (value.kind === 'stroke' || value.kind === 'draft') {
+    return isStroke(value.stroke) ? (packet as Packet) : null;
+  }
+  return null;
+}
 
 export function useLiveRoom(
   api: WidgetApi | null,
@@ -32,19 +55,22 @@ export function useLiveRoom(
   useEffect(() => {
     if (!api || !roomId || !gameId) return;
     let alive = true;
+    let announceTimer: number | undefined;
+    setIdentities({});
     const room = new Room();
     roomRef.current = room;
     const player = widgetUrlParam('userId');
     const announce = () => {
       if (player)
-        void room.localParticipant.publishData(
-          encoder.encode(JSON.stringify({ kind: 'presence', player })),
-          { reliable: true },
-        );
+        void room.localParticipant
+          .publishData(encoder.encode(JSON.stringify({ kind: 'presence', player })), {
+            reliable: true,
+          })
+          .catch(() => undefined);
     };
     room.on(RoomEvent.DataReceived, (data: Uint8Array, participant?: RemoteParticipant) => {
       try {
-        const packet = JSON.parse(decoder.decode(data)) as Packet;
+        const packet = parsePacket(data);
         if (packet?.kind === 'presence' && participant?.identity) {
           setIdentities((current) => ({ ...current, [packet.player]: participant.identity }));
         } else if (packet && typeof packet.kind === 'string')
@@ -54,6 +80,14 @@ export function useLiveRoom(
       }
     });
     room.on(RoomEvent.ParticipantConnected, announce);
+    room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      if (!alive) return;
+      setIdentities((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([, identity]) => identity !== participant.identity),
+        ),
+      );
+    });
     room.on(RoomEvent.Disconnected, () => {
       if (alive) setState('error');
     });
@@ -67,7 +101,9 @@ export function useLiveRoom(
           throw new Error('The Matrix client did not provide a LiveKit service.');
         const openid = await api!.requestOpenIDConnectToken();
         if (!openid.access_token) throw new Error('OpenID permission was not granted.');
-        const deviceId = widgetUrlParam('deviceId') ?? 'widget-device';
+        const deviceId = widgetUrlParam('deviceId');
+        if (!deviceId || deviceId.startsWith('$'))
+          throw new Error('The widget URL needs a deviceId=$matrix_device_id parameter.');
         const response = await fetch(`${service.replace(/\/$/, '')}/get_token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -89,6 +125,7 @@ export function useLiveRoom(
           setState('connected');
           setError('');
           announce();
+          announceTimer = window.setInterval(announce, 5000);
         }
       } catch (cause) {
         if (alive) {
@@ -100,6 +137,7 @@ export function useLiveRoom(
     void connect();
     return () => {
       alive = false;
+      if (announceTimer !== undefined) window.clearInterval(announceTimer);
       roomRef.current = null;
       void room.disconnect();
     };
@@ -108,11 +146,15 @@ export function useLiveRoom(
   async function send(packet: Packet, destination?: string) {
     const room = roomRef.current;
     if (!room || state !== 'connected') return false;
-    await room.localParticipant.publishData(encoder.encode(JSON.stringify(packet)), {
-      reliable: true,
-      ...(destination ? { destinationIdentities: [destination] } : {}),
-    });
-    return true;
+    try {
+      await room.localParticipant.publishData(encoder.encode(JSON.stringify(packet)), {
+        reliable: packet.kind !== 'draft',
+        ...(destination ? { destinationIdentities: [destination] } : {}),
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return { state, error, send, identities };

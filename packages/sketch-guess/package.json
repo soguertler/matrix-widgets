@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "test": "node --experimental-strip-types --test src/model/*.test.ts"
+    "test": "node --experimental-strip-types --test src/model/*.test.ts src/matrix/*.test.ts"
   },
   "dependencies": {
     "@widget-games/widget-shared": "workspace:^",

@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useRef, useState, type Dispatch, type PointerEvent, type SetStateAction } from 'react';
 import { Eraser, RotateCcw } from 'lucide-react';
 import type { Point, Stroke } from '../model/game';
 
@@ -21,24 +21,35 @@ export default function Canvas({
   setStrokes,
   editable,
   onStroke,
+  onDraft,
   onClear,
+  remoteDraft,
 }: {
   strokes: Stroke[];
-  setStrokes: (strokes: Stroke[]) => void;
+  setStrokes: Dispatch<SetStateAction<Stroke[]>>;
   editable: boolean;
   onStroke: (stroke: Stroke) => void;
+  onDraft: (stroke: Stroke) => void;
   onClear: () => void;
+  remoteDraft?: Stroke | null;
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const current = useRef<Stroke | null>(null);
+  const lastDraftSent = useRef(0);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const [color, setColor] = useState(colors[0]!);
   const [width, setWidth] = useState(5);
   function point(event: PointerEvent<SVGSVGElement>): Point {
     const bounds = svg.current!.getBoundingClientRect();
     return {
-      x: Math.round(((event.clientX - bounds.left) * 800) / bounds.width),
-      y: Math.round(((event.clientY - bounds.top) * 500) / bounds.height),
+      x: Math.max(
+        0,
+        Math.min(800, Math.round(((event.clientX - bounds.left) * 800) / bounds.width)),
+      ),
+      y: Math.max(
+        0,
+        Math.min(500, Math.round(((event.clientY - bounds.top) * 500) / bounds.height)),
+      ),
     };
   }
   function down(event: PointerEvent<SVGSVGElement>) {
@@ -52,8 +63,20 @@ export default function Canvas({
     const next = point(event);
     const last = current.current.points.at(-1)!;
     if (Math.hypot(next.x - last.x, next.y - last.y) < 2) return;
-    current.current = { ...current.current, points: [...current.current.points, next] };
+    let points = [...current.current.points, next];
+    if (points.length > 500)
+      points = points.filter((_, index) => index % 2 === 0 || index === points.length - 1);
+    current.current = { ...current.current, points };
     setDraft(current.current);
+    if (performance.now() - lastDraftSent.current >= 40) {
+      lastDraftSent.current = performance.now();
+      const step = Math.max(1, Math.ceil(current.current.points.length / 30));
+      const preview = current.current.points;
+      onDraft({
+        ...current.current,
+        points: preview.filter((_, index) => index % step === 0 || index === preview.length - 1),
+      });
+    }
   }
   function up() {
     if (!current.current) return;
@@ -65,7 +88,7 @@ export default function Canvas({
     const stroke = { ...drawn, points };
     current.current = null;
     setDraft(null);
-    setStrokes([...strokes, stroke]);
+    setStrokes((old) => [...old, stroke]);
     onStroke(stroke);
   }
   return (
@@ -121,26 +144,27 @@ export default function Canvas({
         onPointerUp={up}
         onPointerCancel={up}
       >
-        {[...strokes, ...(draft ? [draft] : [])].map((stroke) =>
-          stroke.points.length === 1 ? (
-            <circle
-              key={stroke.id}
-              cx={stroke.points[0]!.x}
-              cy={stroke.points[0]!.y}
-              r={stroke.width / 2}
-              fill={stroke.color}
-            />
-          ) : (
-            <path
-              key={stroke.id}
-              d={path(stroke.points)}
-              stroke={stroke.color}
-              strokeWidth={stroke.width}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          ),
+        {[...strokes, ...(draft ? [draft] : []), ...(remoteDraft ? [remoteDraft] : [])].map(
+          (stroke) =>
+            stroke.points.length === 1 ? (
+              <circle
+                key={stroke.id}
+                cx={stroke.points[0]!.x}
+                cy={stroke.points[0]!.y}
+                r={stroke.width / 2}
+                fill={stroke.color}
+              />
+            ) : (
+              <path
+                key={stroke.id}
+                d={path(stroke.points)}
+                stroke={stroke.color}
+                strokeWidth={stroke.width}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            ),
         )}
       </svg>
     </div>

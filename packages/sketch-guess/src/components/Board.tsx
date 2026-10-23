@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { Pencil, Send, Timer } from 'lucide-react';
 import { displayName, type MemberProfile } from '@widget-games/widget-shared';
 import type { Game, Stroke } from '../model/game';
@@ -16,8 +16,11 @@ export default function Board({
   liveConnected,
   drawerConnected,
   onStroke,
+  onDraft,
   onClear,
+  remoteDraft,
   onNext,
+  canAdvance,
   busy,
   chat,
   guess,
@@ -31,12 +34,15 @@ export default function Board({
   word: string;
   remaining: number;
   strokes: Stroke[];
-  setStrokes: (strokes: Stroke[]) => void;
+  setStrokes: Dispatch<SetStateAction<Stroke[]>>;
   liveConnected: boolean;
   drawerConnected: boolean;
   onStroke: (stroke: Stroke) => void;
+  onDraft: (stroke: Stroke) => void;
   onClear: () => void;
+  remoteDraft: Stroke | null;
   onNext: () => void;
+  canAdvance: boolean;
   busy: boolean;
   chat: { player: string; guess: string }[];
   guess: string;
@@ -69,9 +75,11 @@ export default function Board({
           setStrokes={setStrokes}
           editable={game.phase === 'drawing' && isDrawer && remaining > 0 && liveConnected}
           onStroke={onStroke}
+          onDraft={onDraft}
           onClear={onClear}
+          remoteDraft={remoteDraft}
         />
-        {game.phase === 'reveal' && userId === game.host && (
+        {game.phase === 'reveal' && canAdvance && (
           <button
             onClick={onNext}
             disabled={busy}

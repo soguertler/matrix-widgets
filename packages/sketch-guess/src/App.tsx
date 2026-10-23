@@ -14,9 +14,9 @@ import Choosing from './components/Choosing';
 import Board from './components/Board';
 import { EVENT_TYPE, WORDS, compactDrawing, gameFromEvents, type Stroke } from './model/game';
 import { useLiveRoom, type Packet } from './rtc/useLiveRoom';
+import { readCurrentGameEvents } from './matrix/readEvents';
 
 const capabilities = [MatrixCapabilities.MSC4515RtcTransports];
-const readEvents = (read: (limit: number) => Promise<RoomEvent[]>) => read(2000);
 const normal = (word: string) => word.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
 
 export default function App() {
@@ -31,7 +31,7 @@ export default function App() {
     widgetId,
     enabled: !missing,
     eventType: EVENT_TYPE,
-    readEvents,
+    readEvents: readCurrentGameEvents,
     capabilities,
   });
   const game = useMemo(() => gameFromEvents(events), [events]);
@@ -40,6 +40,8 @@ export default function App() {
   const [word, setWord] = useState('');
   const [guess, setGuess] = useState('');
   const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [remoteDraft, setRemoteDraft] = useState<Stroke | null>(null);
+  const completedStrokeIds = useRef(new Set<string>());
   const [chat, setChat] = useState<{ player: string; guess: string }[]>([]);
   const [now, setNow] = useState(Date.now());
   const pending = useRef(false);
@@ -63,12 +65,31 @@ export default function App() {
     const current = gameRef.current;
     if (packet.kind === 'presence') return;
     if (!current || packet.index !== current.index || current.phase !== 'drawing') return;
-    if (packet.kind === 'stroke' && !isDrawer) {
+    if (
+      packet.kind === 'stroke' &&
+      !isDrawer &&
+      live.identities[current.drawer ?? ''] === identity
+    ) {
+      completedStrokeIds.current.add(packet.stroke.id);
+      setRemoteDraft((draft) => (draft?.id === packet.stroke.id ? null : draft));
       setStrokes((old) =>
         old.some((item) => item.id === packet.stroke.id) ? old : [...old, packet.stroke],
       );
-    } else if (packet.kind === 'clear' && !isDrawer) {
+    } else if (
+      packet.kind === 'draft' &&
+      !isDrawer &&
+      live.identities[current.drawer ?? ''] === identity &&
+      !completedStrokeIds.current.has(packet.stroke.id)
+    ) {
+      setRemoteDraft(packet.stroke);
+    } else if (
+      packet.kind === 'clear' &&
+      !isDrawer &&
+      live.identities[current.drawer ?? ''] === identity
+    ) {
       setStrokes([]);
+      setRemoteDraft(null);
+      completedStrokeIds.current.clear();
     } else if (packet.kind === 'sync' && isDrawer && identity) {
       void (async () => {
         await live.send({ kind: 'clear', index: current.index }, identity);
@@ -99,7 +120,7 @@ export default function App() {
         setChat((old) => [...old.slice(-29), { player: packet.player, guess: text }]);
         void live.send({ kind: 'chat', player: packet.player, guess: text, index: current.index });
       }
-    } else if (packet.kind === 'chat') {
+    } else if (packet.kind === 'chat' && live.identities[current.drawer ?? ''] === identity) {
       setChat((old) => [...old.slice(-29), { player: packet.player, guess: packet.guess }]);
     }
   }
@@ -116,6 +137,8 @@ export default function App() {
   }, []);
   useEffect(() => {
     setStrokes([]);
+    setRemoteDraft(null);
+    completedStrokeIds.current.clear();
     setChat([]);
     pending.current = false;
     setWord(roundKey ? (sessionStorage.getItem(`sketch-word:${roundKey}`) ?? '') : '');
@@ -125,6 +148,20 @@ export default function App() {
       void live.send({ kind: 'sync', index: game.index });
     }
   }, [live.state, roundKey, game?.phase, isDrawer]);
+  useEffect(() => {
+    if (
+      !game ||
+      game.phase !== 'choosing' ||
+      !game.players.includes(userId ?? '') ||
+      now < game.choosingAt + 30_000 ||
+      pending.current
+    )
+      return;
+    pending.current = true;
+    void action('skip', { index: game.index }).then((ok) => {
+      if (!ok) pending.current = false;
+    });
+  }, [now, game?.phase, game?.index, userId]);
   useEffect(() => {
     const allSolved = game?.players.every(
       (player) => player === game.drawer || game.solved.includes(player),
@@ -166,7 +203,7 @@ export default function App() {
     if (!game || !isDrawer) return;
     sessionStorage.setItem(`sketch-word:${roundKey}`, chosen);
     setWord(chosen);
-    await action('round', { index: game.index, length: chosen.length });
+    await action('round', { index: game.index, length: chosen.replace(/\s/g, '').length });
   }
   async function submitGuess(event: FormEvent) {
     event.preventDefault();
@@ -258,6 +295,10 @@ export default function App() {
             members={members}
             avatarUrls={avatarUrls}
             busy={busy}
+            canCancel={
+              userId === game.host ||
+              (game.players.includes(userId ?? '') && now >= game.createdAt + 120_000)
+            }
             onAction={(kind) => void action(kind)}
           />
         )}
@@ -269,6 +310,7 @@ export default function App() {
             choices={choices}
             busy={busy}
             liveConnected={live.state === 'connected'}
+            secondsLeft={Math.max(0, Math.ceil((game.choosingAt + 30_000 - now) / 1000))}
             onChoose={(choice) => void choose(choice)}
           />
         )}
@@ -285,8 +327,14 @@ export default function App() {
             liveConnected={live.state === 'connected'}
             drawerConnected={!!live.identities[game.drawer ?? '']}
             onStroke={(stroke) => void live.send({ kind: 'stroke', stroke, index: game.index })}
+            onDraft={(stroke) => void live.send({ kind: 'draft', stroke, index: game.index })}
             onClear={() => void live.send({ kind: 'clear', index: game.index })}
+            remoteDraft={remoteDraft}
             onNext={() => void action('start')}
+            canAdvance={
+              userId === game.host ||
+              (game.players.includes(userId ?? '') && now >= game.revealedAt + 5000)
+            }
             busy={busy}
             chat={chat}
             guess={guess}

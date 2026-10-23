@@ -44,7 +44,8 @@ also needs `&deviceId=$matrix_device_id`. The client must support the
 and provide a LiveKit transport. All players open the same widget in one Matrix
 room. The host creates a lobby, and players join before starting. Every player
 draws once per round; the drawer picks one of three words, and guessers score
-based on the remaining time. The host advances after each reveal.
+based on the remaining time. The host advances after each reveal; another player
+can advance after five seconds if the host is absent.
 
 ## Use a release
 
@@ -73,11 +74,17 @@ reaches zero. Drawing turns store vector strokes and PNG masks for area fills.
 
 Sketch & Guess uses `com.widget_games.sketch_guess` room events for lobbies,
 round starts, scores, and reveals. The secret word and guesses are absent from
-room events during drawing. LiveKit data packets carry guesses and strokes;
+room events during drawing. LiveKit data packets carry private guesses, live
+stroke previews, and completed strokes;
 disconnected players can resume the current drawing through a stroke replay from
 the drawer. The reveal event stores the word and a compacted drawing in Matrix
 room history. Any joined player can expire a round five seconds after its timer
 ends if the drawer did not reveal it.
+An unchosen word is skipped after 30 seconds. A joined player can cancel a
+lobby after two minutes if its host does not return.
+The widget polls room events every two seconds and loads up to 4,000 events to
+find the latest game's creation. It reports an error if the client cannot
+provide enough history.
 
 ## Build and checks
 
