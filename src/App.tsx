@@ -191,7 +191,7 @@ export default function App() {
             <button
               className="mt-5 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
               disabled={busy}
-              onClick={() => void send({ version: 1, kind: 'create', gameId: crypto.randomUUID() })}
+              onClick={() => void send({ version: 2, kind: 'create', gameId: crypto.randomUUID() })}
               type="button"
             >
               Create lobby
@@ -212,9 +212,17 @@ export default function App() {
         )}
 
         {game?.phase === 'playing' && userId && (
-          <Playing key={game.id} game={game} userId={userId} busy={busy} send={send} />
+          <Playing
+            key={`${game.id}-${game.round}`}
+            game={game}
+            userId={userId}
+            busy={busy}
+            send={send}
+          />
         )}
-        {game?.phase === 'reveal' && <Reveal game={game} busy={busy} send={send} />}
+        {game?.phase === 'reveal' && userId && (
+          <Reveal game={game} userId={userId} busy={busy} send={send} />
+        )}
       </div>
     </main>
   );

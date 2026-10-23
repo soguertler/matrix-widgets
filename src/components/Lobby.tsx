@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import type { Game, GameAction } from '../model/game';
+import { MAX_PLAYERS, MIN_PLAYERS, type Game, type GameAction } from '../model/game';
 import { displayName, type MemberProfile } from '../matrix/PlayerProfiles';
 
 type Props = {
@@ -21,7 +21,7 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
       </h2>
       <p className="mt-2 text-sm text-slate-300">
         Each person opens this widget in Element and joins here. The creator starts when everyone is
-        ready (2–3 players).
+        ready ({MIN_PLAYERS}–{MAX_PLAYERS} players).
       </p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {game.joined.map((player) => {
@@ -56,11 +56,11 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
           );
         })}
       </ul>
-      {userId && !game.joined.includes(userId) && (
+      {userId && !game.joined.includes(userId) && game.joined.length < MAX_PLAYERS && (
         <button
           className="mt-5 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
           disabled={busy || !connected}
-          onClick={() => void send({ version: 1, kind: 'join', gameId: game.id })}
+          onClick={() => void send({ version: 2, kind: 'join', gameId: game.id })}
           type="button"
         >
           Join game
@@ -69,14 +69,13 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
       {isOwner && (
         <button
           className="mt-5 rounded-xl bg-violet-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
-          disabled={busy || game.joined.length < 2 || game.joined.length > 3}
+          disabled={busy || game.joined.length < MIN_PLAYERS || game.joined.length > MAX_PLAYERS}
           onClick={() =>
             void send({
-              version: 1,
+              version: 2,
               kind: 'start',
               gameId: game.id,
               players: game.joined,
-              steps: game.joined.length % 2 === 1 ? game.joined.length : game.joined.length + 1,
             })
           }
           type="button"
@@ -88,7 +87,7 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
         <button
           className="ml-3 mt-5 inline-flex items-center gap-2 rounded-xl border border-rose-400/60 px-5 py-3 font-bold text-rose-200 hover:bg-rose-950 disabled:opacity-50"
           disabled={busy}
-          onClick={() => void send({ version: 1, kind: 'cancel', gameId: game.id })}
+          onClick={() => void send({ version: 2, kind: 'cancel', gameId: game.id })}
           type="button"
         >
           <X size={17} />

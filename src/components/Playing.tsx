@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Timer } from 'lucide-react';
 import {
   allSubmitted,
   bookOwner,
   previousEntry,
+  ROUND_MS,
   submittedForPlayer,
   submissionKey,
   type Entry,
@@ -25,6 +26,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [drawingWorking, setDrawingWorking] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const lastExpiryAttempt = useRef(0);
   useEffect(() => {
     setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -47,8 +49,15 @@ export default function Playing({ game, userId, busy, send }: Props) {
       : roundIsDrawing
         ? 'Draw what you read'
         : 'Guess what you see';
-  const secondsLeft = Math.max(0, Math.ceil((game.roundStartedAt + 120_000 - now) / 1000));
+  const secondsLeft = Math.max(0, Math.ceil((game.roundStartedAt + ROUND_MS - now) / 1000));
   const clock = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+
+  useEffect(() => {
+    if (!isPlayer || complete || secondsLeft > 0 || busy || now - lastExpiryAttempt.current < 5000)
+      return;
+    lastExpiryAttempt.current = now;
+    void send({ version: 2, kind: 'expire', gameId: game.id, round: game.round });
+  }, [isPlayer, complete, secondsLeft, busy, now, game.id, game.round, send]);
 
   async function submitTurn() {
     if (!isPlayer || submitted || drawingWorking) return;
@@ -58,7 +67,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
     if (entry.kind === 'drawing' && entry.strokes.length === 0) return;
     if (entry.kind === 'text' && !entry.text) return;
     const saved = await send({
-      version: 1,
+      version: 2,
       kind: 'submit',
       gameId: game.id,
       round: game.round,
@@ -90,7 +99,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
       </div>
       {secondsLeft === 0 && isPlayer && !submitted && (
         <p className="mt-3 text-sm text-amber-200">
-          Time is up. You can still finish and submit your turn.
+          Time is up. Missing turns will be marked as timed out.
         </p>
       )}
       {isPlayer && !submitted && (
@@ -147,22 +156,6 @@ export default function Playing({ game, userId, busy, send }: Props) {
         <p className="mt-5 text-slate-300">
           This game is in progress. You can watch the reveal when it finishes.
         </p>
-      )}
-      {isPlayer && complete && (
-        <button
-          className="mt-5 rounded-xl bg-violet-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
-          disabled={busy}
-          onClick={() =>
-            void send(
-              game.round + 1 === game.steps
-                ? { version: 1, kind: 'reveal', gameId: game.id }
-                : { version: 1, kind: 'advance', gameId: game.id, round: game.round },
-            )
-          }
-          type="button"
-        >
-          {game.round + 1 === game.steps ? 'Reveal the stories' : 'Next round'}
-        </button>
       )}
     </section>
   );

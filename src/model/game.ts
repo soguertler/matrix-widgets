@@ -2,6 +2,9 @@ import type { IRoomEvent } from 'matrix-widget-api';
 
 export const GAME_EVENT = 'com.local.matrix_widget_lab.doodle_phone';
 export const MAX_GAME_EVENT_BYTES = 60_000;
+export const MIN_PLAYERS = 2;
+export const MAX_PLAYERS = 14;
+export const ROUND_MS = 120_000;
 export type Point = [number, number];
 export const DRAW_COLORS = [
   '#111827',
@@ -39,13 +42,13 @@ export type Stroke =
 export type Entry = { kind: 'text'; text: string } | { kind: 'drawing'; strokes: Stroke[] };
 
 type Action =
-  | { version: 1; kind: 'create'; gameId: string }
-  | { version: 1; kind: 'join'; gameId: string }
-  | { version: 1; kind: 'cancel'; gameId: string }
-  | { version: 1; kind: 'start'; gameId: string; players: string[]; steps: number }
-  | { version: 1; kind: 'submit'; gameId: string; round: number; entry: Entry }
-  | { version: 1; kind: 'advance'; gameId: string; round: number }
-  | { version: 1; kind: 'reveal'; gameId: string };
+  | { version: 2; kind: 'create'; gameId: string }
+  | { version: 2; kind: 'join'; gameId: string }
+  | { version: 2; kind: 'cancel'; gameId: string }
+  | { version: 2; kind: 'start'; gameId: string; players: string[] }
+  | { version: 2; kind: 'submit'; gameId: string; round: number; entry: Entry }
+  | { version: 2; kind: 'expire'; gameId: string; round: number }
+  | { version: 2; kind: 'revealNext'; gameId: string; index: number };
 
 export type GameAction = Action;
 export type GameEvent = Pick<IRoomEvent, 'sender' | 'event_id' | 'origin_server_ts' | 'content'>;
@@ -59,6 +62,7 @@ export type Game = {
   steps: number;
   round: number;
   roundStartedAt: number;
+  revealIndex: number;
   submissions: Map<string, SubmittedEntry>;
 };
 
@@ -133,9 +137,9 @@ function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is 
 
 function actionOf(event: GameEvent): Action | null {
   const content = event.content as Partial<Action>;
-  if (content.version !== 1 || typeof content.gameId !== 'string') return null;
+  if (content.version !== 2 || typeof content.gameId !== 'string') return null;
   if (
-    !['create', 'join', 'cancel', 'start', 'submit', 'advance', 'reveal'].includes(
+    !['create', 'join', 'cancel', 'start', 'submit', 'expire', 'revealNext'].includes(
       String(content.kind),
     )
   )
@@ -173,6 +177,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         steps: 0,
         round: 0,
         roundStartedAt: 0,
+        revealIndex: 0,
         submissions: new Map(),
       };
       continue;
@@ -181,21 +186,22 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
     if (action.kind === 'cancel' && game.phase === 'lobby' && event.sender === game.owner) {
       game = null;
     } else if (action.kind === 'join' && game.phase === 'lobby') {
-      if (!game.joined.includes(event.sender)) game.joined.push(event.sender);
+      if (!game.joined.includes(event.sender) && game.joined.length < MAX_PLAYERS)
+        game.joined.push(event.sender);
     } else if (action.kind === 'start' && game.phase === 'lobby' && event.sender === game.owner) {
       const roster = action.players;
       const joined = game.joined;
       if (
         !Array.isArray(roster) ||
-        roster.length < 2 ||
-        roster.length > 3 ||
+        roster.length < MIN_PLAYERS ||
+        roster.length > MAX_PLAYERS ||
         new Set(roster).size !== roster.length ||
         !roster.includes(game.owner) ||
         !roster.every((player) => joined.includes(player))
       )
         continue;
       game.players = roster;
-      game.steps = roster.length % 2 === 1 ? roster.length : roster.length + 1;
+      game.steps = roster.length;
       game.phase = 'playing';
       game.roundStartedAt = event.origin_server_ts;
     } else if (
@@ -210,26 +216,47 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
       const key = submissionKey(game.round, book);
       if (!game.submissions.has(key))
         game.submissions.set(key, { author: event.sender, round: game.round, entry: action.entry });
+      if (allSubmitted(game)) completeRound(game, event.origin_server_ts);
     } else if (
-      action.kind === 'advance' &&
+      action.kind === 'expire' &&
       game.phase === 'playing' &&
       game.players.includes(event.sender) &&
-      action.round === game.round
+      action.round === game.round &&
+      event.origin_server_ts >= game.roundStartedAt + ROUND_MS
     ) {
-      if (!allSubmitted(game)) continue;
-      if (game.round + 1 < game.steps) {
-        game.round += 1;
-        game.roundStartedAt = event.origin_server_ts;
+      for (const player of game.players) {
+        const book = bookOwner(game.players, player, game.round)!;
+        const key = submissionKey(game.round, book);
+        if (!game.submissions.has(key)) {
+          const entry: Entry =
+            game.round % 2 === 1
+              ? { kind: 'drawing', strokes: [] }
+              : { kind: 'text', text: '(time ran out)' };
+          game.submissions.set(key, { author: player, round: game.round, entry });
+        }
       }
+      completeRound(game, event.origin_server_ts);
     } else if (
-      action.kind === 'reveal' &&
-      game.phase === 'playing' &&
-      game.players.includes(event.sender)
+      action.kind === 'revealNext' &&
+      game.phase === 'reveal' &&
+      game.players.includes(event.sender) &&
+      action.index === game.revealIndex &&
+      game.revealIndex < game.players.length * game.steps
     ) {
-      if (game.round === game.steps - 1 && allSubmitted(game)) game.phase = 'reveal';
+      game.revealIndex += 1;
     }
   }
   return game;
+}
+
+function completeRound(game: Game, timestamp: number): void {
+  if (game.round + 1 === game.steps) {
+    game.phase = 'reveal';
+    game.revealIndex = 1;
+  } else {
+    game.round += 1;
+    game.roundStartedAt = timestamp;
+  }
 }
 
 export function allSubmitted(game: Game): boolean {

@@ -19,8 +19,9 @@ https://your-widget-host.example/?widgetId=$matrix_widget_id&userId=$matrix_user
 The client must grant permission to send and receive
 `com.local.matrix_widget_lab.doodle_phone` room events, receive `m.room.member`
 state events, and download profile images. All players use the same room and
-widget. The host creates and starts the game. Any player can advance a complete
-round or reveal the result. Games support two or three players.
+widget. The host creates and starts the game with 2–14 players. Rounds advance
+when everyone submits; after two minutes, missing turns are marked as timed out.
+Players step through the shared reveal one entry at a time.
 
 ## Use a release
 
@@ -34,15 +35,15 @@ use your hosted copy as the widget URL.
 ## Protocol
 
 Game actions are non-state Matrix room events of type
-`com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 1`, a
-`gameId`, and a `kind` of `create`, `join`, `cancel`, `start`, `submit`, `advance`,
-or `reveal`. `src/model/game.ts` validates and reduces these events into game
+`com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 2`, a
+`gameId`, and a `kind` of `create`, `join`, `cancel`, `start`, `submit`, `expire`,
+or `revealNext`. `src/model/game.ts` validates and reduces these events into game
 state. Room members can read the events, including prompts and drawings,
 regardless of whether their client displays them in the timeline.
 
 The widget reads the latest 1,000 game events from the host every two seconds.
-Older events outside that window are unavailable to its reducer. The round
-timer is visual; it does not prevent late submissions or advance the game.
+Older events outside that window are unavailable to its reducer. A connected
+player's widget sends an expiry event when the round timer reaches zero.
 
 The drawing tools store vector strokes and PNG masks for area fills in submit
 events. The full-screen button uses the browser Fullscreen API or sends a
