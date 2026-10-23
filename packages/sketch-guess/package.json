@@ -1,0 +1,30 @@
+{
+  "name": "@widget-games/sketch-guess",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --experimental-strip-types --test src/model/*.test.ts"
+  },
+  "dependencies": {
+    "@widget-games/widget-shared": "workspace:^",
+    "livekit-client": "catalog:",
+    "lucide-react": "catalog:",
+    "matrix-widget-api": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@widget-games/tsconfig": "workspace:^",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-singlefile": "catalog:"
+  }
+}

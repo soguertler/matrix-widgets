@@ -1,0 +1,11 @@
+{
+  "extends": "@widget-games/tsconfig/base",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

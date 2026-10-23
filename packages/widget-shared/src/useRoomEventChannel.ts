@@ -18,6 +18,7 @@ type Options<TEvent extends RoomEvent> = {
   readErrorLabel?: string;
   sendErrorLabel?: string;
   permissionError?: string;
+  capabilities?: string[];
 };
 
 export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends object>({
@@ -29,6 +30,7 @@ export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends ob
   readErrorLabel = 'Could not read room events',
   sendErrorLabel = 'Could not send room event',
   permissionError = 'The Matrix client did not grant permission to send and receive room events. Review this widget’s permissions in your client, then reopen it.',
+  capabilities = [],
 }: Options<TEvent>) {
   const apiRef = useRef<WidgetApi | null>(null);
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
@@ -49,6 +51,7 @@ export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends ob
     widgetApi.requestCapabilityToReceiveEvent(eventType);
     widgetApi.requestCapabilityToReceiveState('m.room.member');
     widgetApi.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
+    for (const capability of capabilities) widgetApi.requestCapability(capability);
     let alive = true;
     let pollTimer: number | undefined;
     let contentLoadedRetry: number | undefined;
