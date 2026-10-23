@@ -87,9 +87,10 @@ export default function App() {
       interval = window.setInterval(() => void refresh(), 2000);
     });
     api.start();
-    void api.sendContentLoaded().catch(() => undefined);
+    const loadedTimer = window.setTimeout(() => void api.sendContentLoaded().catch(() => undefined), 500);
     return () => {
       alive = false;
+      window.clearTimeout(loadedTimer);
       if (interval !== undefined) window.clearInterval(interval);
       api.transport.stop();
       apiRef.current = null;
