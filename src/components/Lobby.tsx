@@ -1,5 +1,13 @@
+import { useState } from 'react';
 import { X } from 'lucide-react';
-import { MAX_PLAYERS, MIN_PLAYERS, type Game, type GameAction } from '../model/game';
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  ROUND_MS,
+  ROUND_OPTIONS,
+  type Game,
+  type GameAction,
+} from '../model/game';
 import { displayName, type MemberProfile } from '../matrix/PlayerProfiles';
 
 type Props = {
@@ -14,6 +22,9 @@ type Props = {
 
 export default function Lobby({ game, userId, connected, busy, members, avatarUrls, send }: Props) {
   const isOwner = game.owner === userId;
+  const [turns, setTurns] = useState<number | 'all'>('all');
+  const [roundMs, setRoundMs] = useState<number>(ROUND_MS);
+  const steps = turns === 'all' ? game.joined.length : Math.min(turns, game.joined.length);
   return (
     <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
       <h2 className="text-xl font-bold">
@@ -56,6 +67,44 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
           );
         })}
       </ul>
+      {isOwner && (
+        <div className="mt-5 flex flex-wrap gap-4 rounded-xl bg-slate-800 p-4">
+          <label className="text-sm font-medium text-slate-200">
+            Turns per story
+            <select
+              className="mt-1 block rounded-lg border border-slate-600 bg-slate-900 px-3 py-2"
+              value={turns}
+              onChange={(event) =>
+                setTurns(event.target.value === 'all' ? 'all' : Number(event.target.value))
+              }
+            >
+              <option value="all">All players ({game.joined.length})</option>
+              {Array.from(
+                { length: Math.max(0, game.joined.length - 2) },
+                (_, index) => index + 2,
+              ).map((count) => (
+                <option key={count} value={count}>
+                  {count} turns
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-slate-200">
+            Time per turn
+            <select
+              className="mt-1 block rounded-lg border border-slate-600 bg-slate-900 px-3 py-2"
+              value={roundMs}
+              onChange={(event) => setRoundMs(Number(event.target.value))}
+            >
+              {ROUND_OPTIONS.map((duration) => (
+                <option key={duration} value={duration}>
+                  {duration / 60_000} minute{duration === 60_000 ? '' : 's'}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       {userId && !game.joined.includes(userId) && game.joined.length < MAX_PLAYERS && (
         <button
           className="mt-5 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
@@ -76,6 +125,8 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
               kind: 'start',
               gameId: game.id,
               players: game.joined,
+              steps,
+              roundMs,
             })
           }
           type="button"

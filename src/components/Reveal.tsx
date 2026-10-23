@@ -1,5 +1,8 @@
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { submissionKey, type Game, type GameAction } from '../model/game';
 import { displayName } from '../matrix/PlayerProfiles';
+import { exportStory } from '../reveal/export';
 import RoundEntry from './RoundEntry';
 
 export default function Reveal({
@@ -13,11 +16,25 @@ export default function Reveal({
   busy: boolean;
   send: (action: GameAction) => Promise<boolean>;
 }) {
+  const [index, setIndex] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
   const total = game.players.length * game.steps;
-  const bookIndex = Math.floor((game.revealIndex - 1) / game.steps);
-  const visibleSteps = ((game.revealIndex - 1) % game.steps) + 1;
+  const bookIndex = Math.floor(index / game.steps);
+  const visibleSteps = (index % game.steps) + 1;
   const book = game.players[bookIndex];
-  const finished = game.revealIndex === total;
+
+  async function download() {
+    setExporting(true);
+    setExportError('');
+    try {
+      await exportStory(game, bookIndex);
+    } catch {
+      setExportError('Could not export this story. Try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <section className="space-y-5">
@@ -26,24 +43,38 @@ export default function Reveal({
         <p className="mt-2 text-slate-300">
           Story {bookIndex + 1} of {game.players.length} · Step {visibleSteps} of {game.steps}
         </p>
-        {game.players.includes(userId) && !finished && (
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
-            className="mt-4 rounded-xl bg-violet-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
-            disabled={busy}
-            onClick={() =>
-              void send({
-                version: 2,
-                kind: 'revealNext',
-                gameId: game.id,
-                index: game.revealIndex,
-              })
-            }
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 px-4 py-2 font-bold disabled:opacity-40"
+            disabled={index === 0}
+            onClick={() => setIndex(index - 1)}
             type="button"
           >
-            {visibleSteps === game.steps ? 'Next story' : 'Next step'}
+            <ChevronLeft size={17} /> Previous
           </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-400 px-4 py-2 font-bold text-slate-950 disabled:opacity-40"
+            disabled={index + 1 === total}
+            onClick={() => setIndex(index + 1)}
+            type="button"
+          >
+            {visibleSteps === game.steps ? 'Next story' : 'Next step'} <ChevronRight size={17} />
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 px-4 py-2 font-bold disabled:opacity-40"
+            disabled={exporting}
+            onClick={() => void download()}
+            type="button"
+          >
+            <Download size={17} /> {exporting ? 'Exporting…' : 'Download story'}
+          </button>
+        </div>
+        {exportError && (
+          <p role="alert" className="mt-3 text-sm text-rose-200">
+            {exportError}
+          </p>
         )}
-        {finished && (
+        {game.owner === userId && index + 1 === total && (
           <button
             className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
             disabled={busy}

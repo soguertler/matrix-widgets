@@ -31,13 +31,15 @@ function lobby(count: number): GameEvent[] {
     events.push(event(player, { version: 2, kind: 'join', gameId: 'one' }));
   return events;
 }
-function start(events: GameEvent[], count: number): void {
+function start(events: GameEvent[], count: number, steps = count, roundMs = ROUND_MS): void {
   events.push(
     event(players[0], {
       version: 2,
       kind: 'start',
       gameId: 'one',
       players: players.slice(0, count),
+      steps,
+      roundMs,
     }),
   );
 }
@@ -77,7 +79,6 @@ test('two players progress automatically and reveal their chains', () => {
   const game = gameFromEvents(events)!;
   assert.equal(game.phase, 'reveal');
   assert.equal(game.steps, 2);
-  assert.equal(game.revealIndex, 1);
   assert.equal(game.submissions.size, 4);
   assert.equal(game.submissions.get(submissionKey(1, players[0]))?.author, players[1]);
 });
@@ -144,16 +145,36 @@ test('timeout fills missing turns and advances only after the deadline', () => {
   });
 });
 
-test('reveal progress is shared and stale duplicate steps are ignored', () => {
+test('host can choose fewer turns and a longer round timer', () => {
+  const events = lobby(3);
+  start(events, 3, 2, 180_000);
+  submitRound(events, 3, 0);
+  submitRound(events, 3, 1);
+  const game = gameFromEvents(events)!;
+  assert.equal(game.phase, 'reveal');
+  assert.equal(game.steps, 2);
+  assert.equal(game.roundMs, 180_000);
+  assert.equal(game.submissions.size, 6);
+});
+
+test('expiry respects the timer chosen by the host', () => {
   const events = lobby(2);
-  start(events, 2);
-  submitRound(events, 2, 0);
-  submitRound(events, 2, 1);
-  events.push(event(players[0], { version: 2, kind: 'revealNext', gameId: 'one', index: 1 }));
-  events.push(event(players[1], { version: 2, kind: 'revealNext', gameId: 'one', index: 1 }));
-  assert.equal(gameFromEvents(events)?.revealIndex, 2);
-  events.push(event(players[1], { version: 2, kind: 'revealNext', gameId: 'one', index: 2 }));
-  assert.equal(gameFromEvents(events)?.revealIndex, 3);
+  start(events, 2, 2, 60_000);
+  const deadline = gameFromEvents(events)!.roundStartedAt + 60_000;
+  events.push(
+    event(players[0], { version: 2, kind: 'expire', gameId: 'one', round: 0 }, deadline - 1),
+  );
+  assert.equal(gameFromEvents(events)?.round, 0);
+  events.push(event(players[0], { version: 2, kind: 'expire', gameId: 'one', round: 0 }, deadline));
+  assert.equal(gameFromEvents(events)?.round, 1);
+});
+
+test('invalid host settings cannot start a game', () => {
+  const events = lobby(2);
+  start(events, 2, 3, 60_000);
+  assert.equal(gameFromEvents(events)?.phase, 'lobby');
+  start(events, 2, 2, 45_000);
+  assert.equal(gameFromEvents(events)?.phase, 'lobby');
 });
 
 test('new lobby cannot displace a game in progress', () => {

@@ -5,6 +5,7 @@ export const MAX_GAME_EVENT_BYTES = 60_000;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 14;
 export const ROUND_MS = 120_000;
+export const ROUND_OPTIONS = [60_000, 120_000, 180_000] as const;
 export type Point = [number, number];
 export const DRAW_COLORS = [
   '#111827',
@@ -48,10 +49,9 @@ type Action =
   | { version: 2; kind: 'join'; gameId: string }
   | { version: 2; kind: 'leave'; gameId: string }
   | { version: 2; kind: 'cancel'; gameId: string }
-  | { version: 2; kind: 'start'; gameId: string; players: string[] }
+  | { version: 2; kind: 'start'; gameId: string; players: string[]; steps: number; roundMs: number }
   | { version: 2; kind: 'submit'; gameId: string; round: number; entry: Entry }
-  | { version: 2; kind: 'expire'; gameId: string; round: number }
-  | { version: 2; kind: 'revealNext'; gameId: string; index: number };
+  | { version: 2; kind: 'expire'; gameId: string; round: number };
 
 export type GameAction = Action;
 export type GameEvent = Pick<IRoomEvent, 'sender' | 'event_id' | 'origin_server_ts' | 'content'>;
@@ -66,7 +66,7 @@ export type Game = {
   steps: number;
   round: number;
   roundStartedAt: number;
-  revealIndex: number;
+  roundMs: number;
   submissions: Map<string, SubmittedEntry>;
 };
 
@@ -144,7 +144,7 @@ function actionOf(event: GameEvent): Action | null {
   const content = event.content as Partial<Action>;
   if (content.version !== 2 || typeof content.gameId !== 'string') return null;
   if (
-    !['create', 'join', 'leave', 'cancel', 'start', 'submit', 'expire', 'revealNext'].includes(
+    !['create', 'join', 'leave', 'cancel', 'start', 'submit', 'expire'].includes(
       String(content.kind),
     )
   )
@@ -183,7 +183,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         steps: 0,
         round: 0,
         roundStartedAt: 0,
-        revealIndex: 0,
+        roundMs: ROUND_MS,
         submissions: new Map(),
       };
       continue;
@@ -213,13 +213,18 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         !Array.isArray(roster) ||
         roster.length < MIN_PLAYERS ||
         roster.length > MAX_PLAYERS ||
+        !Number.isInteger(action.steps) ||
+        action.steps < 2 ||
+        action.steps > roster.length ||
+        !ROUND_OPTIONS.includes(action.roundMs as (typeof ROUND_OPTIONS)[number]) ||
         new Set(roster).size !== roster.length ||
         !roster.includes(game.owner) ||
         !roster.every((player) => joined.includes(player))
       )
         continue;
       game.players = roster;
-      game.steps = roster.length;
+      game.steps = action.steps;
+      game.roundMs = action.roundMs;
       game.phase = 'playing';
       game.roundStartedAt = event.origin_server_ts;
     } else if (
@@ -240,7 +245,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
       game.phase === 'playing' &&
       game.players.includes(event.sender) &&
       action.round === game.round &&
-      event.origin_server_ts >= game.roundStartedAt + ROUND_MS
+      event.origin_server_ts >= game.roundStartedAt + game.roundMs
     ) {
       for (const player of game.players) {
         const book = bookOwner(game.players, player, game.round)!;
@@ -254,14 +259,6 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         }
       }
       completeRound(game, event.origin_server_ts);
-    } else if (
-      action.kind === 'revealNext' &&
-      game.phase === 'reveal' &&
-      game.players.includes(event.sender) &&
-      action.index === game.revealIndex &&
-      game.revealIndex < game.players.length * game.steps
-    ) {
-      game.revealIndex += 1;
     }
   }
   return game;
@@ -271,7 +268,6 @@ function completeRound(game: Game, timestamp: number): void {
   do {
     if (game.round + 1 === game.steps) {
       game.phase = 'reveal';
-      game.revealIndex = 1;
       return;
     }
     game.round += 1;

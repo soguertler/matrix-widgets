@@ -4,7 +4,6 @@ import {
   allSubmitted,
   bookOwner,
   previousEntry,
-  ROUND_MS,
   submittedForPlayer,
   submissionKey,
   type Entry,
@@ -25,6 +24,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
   const [text, setText] = useState('');
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [drawingWorking, setDrawingWorking] = useState(false);
+  const [lastSentAt, setLastSentAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const lastExpiryAttempt = useRef(0);
   useEffect(() => {
@@ -50,7 +50,8 @@ export default function Playing({ game, userId, busy, send }: Props) {
       : roundIsDrawing
         ? 'Draw what you read'
         : 'Guess what you see';
-  const secondsLeft = Math.max(0, Math.ceil((game.roundStartedAt + ROUND_MS - now) / 1000));
+  const secondsLeft = Math.max(0, Math.ceil((game.roundStartedAt + game.roundMs - now) / 1000));
+  const awaitingConfirmation = lastSentAt > 0 && now - lastSentAt < 5000;
   const clock = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   useEffect(() => {
@@ -69,13 +70,14 @@ export default function Playing({ game, userId, busy, send }: Props) {
     if (entry.kind === 'text' && !entry.text) return;
     // Keep the draft until the room timeline confirms this turn. A late event may be
     // accepted by the client but ignored by the game after the round expires.
-    await send({
+    const sent = await send({
       version: 2,
       kind: 'submit',
       gameId: game.id,
       round: game.round,
       entry,
     });
+    if (sent) setLastSentAt(Date.now());
   }
 
   return (
@@ -103,6 +105,16 @@ export default function Playing({ game, userId, busy, send }: Props) {
       )}
       {isPlayer && !submitted && (
         <div className="mt-5 space-y-4">
+          {lastSentAt > 0 && (
+            <p
+              className={`rounded-xl p-3 text-sm ${awaitingConfirmation ? 'bg-sky-950 text-sky-200' : 'bg-amber-950 text-amber-200'}`}
+              role="status"
+            >
+              {awaitingConfirmation
+                ? 'Turn sent. Waiting for the room to confirm it…'
+                : 'Turn not confirmed yet. Your draft is still here; you can retry.'}
+            </p>
+          )}
           {myBook && (
             <p className="text-xs uppercase tracking-widest text-slate-400">
               Your turn in a secret chain
@@ -137,7 +149,10 @@ export default function Playing({ game, userId, busy, send }: Props) {
           <button
             className="rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 hover:bg-emerald-300 disabled:opacity-50"
             disabled={
-              busy || drawingWorking || (roundIsDrawing ? strokes.length === 0 : !text.trim())
+              busy ||
+              drawingWorking ||
+              awaitingConfirmation ||
+              (roundIsDrawing ? strokes.length === 0 : !text.trim())
             }
             onClick={() => void submitTurn()}
             type="button"
@@ -148,7 +163,7 @@ export default function Playing({ game, userId, busy, send }: Props) {
       )}
       {isPlayer && submitted && (
         <p className="mt-5 rounded-xl bg-emerald-950/60 p-4 text-emerald-200">
-          Turn submitted. Waiting for everyone else.
+          Turn confirmed. Waiting for everyone else.
         </p>
       )}
       {!isPlayer && (

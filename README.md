@@ -19,9 +19,10 @@ https://your-widget-host.example/?widgetId=$matrix_widget_id&userId=$matrix_user
 The client must grant permission to send and receive
 `com.local.matrix_widget_lab.doodle_phone` room events, receive `m.room.member`
 state events, and download profile images. All players use the same room and
-widget. The host creates and starts the game with 2–14 players. Rounds advance
-when everyone submits; after two minutes, missing turns are marked as timed out.
-Players step through the shared reveal one entry at a time.
+widget. The host creates and starts the game with 2–14 players, chooses 2–N
+turns per story, and sets a one-, two-, or three-minute timer. Rounds advance
+when everyone submits; missing turns are marked as timed out. Players browse
+the reveal independently and can export each story as a PNG.
 
 ## Use a release
 
@@ -36,8 +37,8 @@ use your hosted copy as the widget URL.
 
 Game actions are non-state Matrix room events of type
 `com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 2`, a
-`gameId`, and a `kind` of `create`, `join`, `leave`, `cancel`, `start`, `submit`, `expire`,
-or `revealNext`. `src/model/game.ts` validates and reduces these events into game
+`gameId`, and a `kind` of `create`, `join`, `leave`, `cancel`, `start`, `submit`, or
+`expire`. `src/model/game.ts` validates and reduces these events into game
 state. Room members can read the events, including prompts and drawings,
 regardless of whether their client displays them in the timeline.
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Circle,
   Eraser,
@@ -113,6 +113,29 @@ export default function DrawingPad({ onChange, onWorkingChange }: Props) {
   const [color, setColor] = useState<(typeof DRAW_COLORS)[number]>('#111827');
   const [width, setWidth] = useState<(typeof DRAW_WIDTHS)[number]>(6);
   const [fillError, setFillError] = useState('');
+  const [cursor, setCursor] = useState<Point | null>(null);
+
+  useEffect(() => {
+    function keydown(event: KeyboardEvent) {
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select'))
+        return;
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) redo();
+        else undo();
+      } else if ((event.ctrlKey || event.metaKey) && key === 'y') {
+        event.preventDefault();
+        redo();
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (key === 'p') setTool('pen');
+        if (key === 'e') setTool('eraser');
+        if (key === 'f') setTool('fill');
+      }
+    }
+    window.addEventListener('keydown', keydown);
+    return () => window.removeEventListener('keydown', keydown);
+  });
 
   function point(event: React.PointerEvent<SVGSVGElement>): Point {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -206,6 +229,7 @@ export default function DrawingPad({ onChange, onWorkingChange }: Props) {
   }
 
   function move(event: React.PointerEvent<SVGSVGElement>) {
+    setCursor(point(event));
     if (!drawingRef.current) return;
     const current = strokesRef.current;
     const active = current.at(-1);
@@ -282,9 +306,22 @@ export default function DrawingPad({ onChange, onWorkingChange }: Props) {
           onPointerMove={move}
           onPointerUp={stop}
           onPointerCancel={stop}
+          onPointerLeave={() => setCursor(null)}
           aria-label="Drawing canvas"
         >
           {strokes.map(renderStroke)}
+          {cursor && (tool === 'pen' || tool === 'eraser') && (
+            <circle
+              cx={cursor[0]}
+              cy={cursor[1]}
+              r={(tool === 'eraser' ? 24 : width) / 2}
+              fill={tool === 'eraser' ? '#ffffff' : color}
+              fillOpacity={0.35}
+              stroke="#0f172a"
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+          )}
         </svg>
         <div
           className="grid grid-cols-6 gap-1 self-start rounded-xl bg-slate-800 p-2 lg:w-28 lg:grid-cols-2"
@@ -356,6 +393,9 @@ export default function DrawingPad({ onChange, onWorkingChange }: Props) {
           {countPoints(strokes)}/{MAX_POINTS} points
         </span>
       </div>
+      <p className="text-xs text-slate-400">
+        Shortcuts: P pen · E eraser · F fill · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z redo
+      </p>
     </div>
   );
 }
