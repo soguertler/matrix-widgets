@@ -43,7 +43,19 @@ Run `pnpm --filter @widget-games/linux dev` to serve the Linux widget at
 `http://127.0.0.1:5174`. It has no Matrix permissions or shared state; each
 participant gets a separate Linux instance in their own browser tab. Click
 **Boot Linux** to download and start the emulator, then enter shell commands
-in the input below the terminal. Restart discards the instance's files. The
+in the xterm.js terminal. The widget sets the guest hostname to
+`widget-linux`, requests a DHCP lease, and offers upload/download controls for
+files in `/mnt`. The Ctrl+C, Ctrl+D, and Ctrl+L buttons send those keys to the
+guest terminal. The boot sequence clears its setup output and runs the included
+static 32-bit `fetch` system info command. Its source is in
+`packages/linux/guest/fetch.c`; rebuild it on Linux with 32-bit libc
+development files using `sh packages/linux/scripts/build-fetch.sh`. The guest
+also includes the static 32-bit minimal Unix build of MicroPython 1.29.0.
+Run `micropython` for its REPL or `micropython -c 'print(6 * 7)'` for a command.
+The build recipe is `packages/linux/scripts/build-micropython.sh`, and its
+upstream license is included with the binary. Networking uses v86's browser `fetch` backend, so HTTP access
+depends on browser CORS rules; it is not unrestricted network access. Restart
+discards the instance's files. The
 host must permit WebAssembly and serve the `.wasm` and `.bin` files from the
 same directory as the HTML.
 
@@ -55,7 +67,8 @@ Add the hosted URL as a room widget, including the parameters shown above. The
 GitHub release URL downloads the file; it is not a widget hosting URL.
 
 The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
-`vgabios.bin`, `buildroot-bzimage68.bin`, and `icon.svg`. Host these files together
+`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `fetch`, `micropython`, and
+`micropython-LICENSE.txt`. Host these files together
 on an HTTPS origin that allows iframe embedding. The Linux widget does not
 need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix
 widget URL so it can complete the client's loading handshake.

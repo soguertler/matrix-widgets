@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Linux terminal</title>
+    <title>Widget Linux</title>
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <header>
         <div>
           <p class="eyebrow">Browser Linux</p>
-          <h1>Linux terminal</h1>
+          <h1>Widget Linux</h1>
           <p class="subtitle">A small Buildroot system running locally in this browser tab.</p>
         </div>
         <div class="actions">
@@ -22,17 +22,31 @@
       </header>
       <section class="terminal-card" aria-label="Linux terminal">
         <div class="terminal-top"><span>ttyS0</span><span>v86 · 32-bit x86</span></div>
-        <pre id="terminal" tabindex="0" aria-label="Terminal output">
-Press “Boot Linux” to start. Downloads about 13 MB of emulator and system files.</pre>
-        <form id="command-form" autocomplete="off">
-          <label for="command">$</label>
-          <input id="command" type="text" spellcheck="false" aria-label="Linux command" disabled />
-          <button type="submit" disabled>Send</button>
-        </form>
+        <div id="terminal" aria-label="Interactive Linux terminal"></div>
       </section>
+      <div class="tool-row" aria-label="Terminal controls">
+        <button id="ctrl-c" type="button" disabled>Ctrl+C</button>
+        <button id="ctrl-d" type="button" disabled>Ctrl+D</button>
+        <button id="ctrl-l" type="button" disabled>Ctrl+L</button>
+        <label class="file-button" for="upload">Upload to /mnt</label>
+        <input id="upload" type="file" disabled />
+        <form id="download-form" autocomplete="off">
+          <label for="download-path">Download from /mnt</label>
+          <input
+            id="download-path"
+            type="text"
+            placeholder="filename"
+            aria-label="File in /mnt"
+            disabled
+          />
+          <button type="submit" disabled>Download</button>
+        </form>
+      </div>
+      <p id="file-status" role="status" class="file-status"></p>
       <p class="hint">
-        Try <code>uname -a</code>, <code>ls /</code>, or <code>help</code>. Files live only in this
-        tab and disappear when you restart.
+        Try <code>fetch</code>, <code>micropython</code>, or <code>ls /mnt</code>. Uploaded files
+        and guest changes disappear when you restart. Click the terminal to type. Network requests
+        use your browser and may be limited by site CORS rules.
       </p>
     </main>
     <script type="module" src="/src/main.ts"></script>

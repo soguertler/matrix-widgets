@@ -12,6 +12,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort"
   },
   "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
     "matrix-widget-api": "catalog:",
     "v86": "0.5.472"
   },

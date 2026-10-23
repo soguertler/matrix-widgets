@@ -98,50 +98,64 @@ button:disabled {
 #terminal {
   height: min(56vh, 560px);
   min-height: 280px;
-  margin: 0;
-  overflow: auto;
-  padding: 16px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font:
-    14px/1.45 ui-monospace,
-    SFMono-Regular,
-    Consolas,
-    monospace;
-}
-#command-form {
-  align-items: center;
-  border-top: 1px solid #294156;
-  display: flex;
-  gap: 12px;
-  padding: 10px 16px;
-}
-#command-form label {
-  color: #61d6a3;
-  font:
-    bold 16px ui-monospace,
-    monospace;
-}
-#command {
-  background: transparent;
-  border: 0;
-  color: #e6edf5;
-  flex: 1;
-  font:
-    15px ui-monospace,
-    monospace;
-  min-width: 0;
-  outline: none;
-}
-#command-form:focus-within {
-  box-shadow: inset 0 0 0 1px #61d6a3;
-}
-#command-form button {
-  padding: 7px 13px;
+  padding: 12px;
 }
 .hint {
   font-size: 13px;
 }
 code {
   color: #9ce8c1;
+}
+.tool-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.tool-row button,
+.file-button {
+  background: #22354a;
+  color: #e6edf5;
+  font-size: 13px;
+  padding: 8px 11px;
+}
+.file-button {
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.tool-row button:hover,
+.file-button:hover {
+  background: #34506b;
+}
+#upload {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.file-button:has(+ #upload:disabled) {
+  opacity: 0.5;
+}
+#download-form {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+#download-form input {
+  width: 130px;
+  background: #0c1b28;
+  border: 1px solid #38536b;
+  border-radius: 7px;
+  color: #e6edf5;
+  font: inherit;
+  padding: 7px;
+}
+.file-status {
+  min-height: 1.3em;
+  color: #9ce8c1;
+  font-size: 13px;
 }
