@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MatrixCapabilities, WidgetApi } from 'matrix-widget-api';
+import {
+  EventDirection,
+  MatrixCapabilities,
+  WidgetApi,
+  WidgetEventCapability,
+} from 'matrix-widget-api';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import Lobby from './components/Lobby';
 import { displayName, usePlayerProfiles } from './matrix/PlayerProfiles';
@@ -27,6 +32,7 @@ export default function App() {
   const apiRef = useRef<WidgetApi | null>(null);
   const refreshRef = useRef<(() => Promise<void>) | null>(null);
   const [connected, setConnected] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -75,6 +81,20 @@ export default function App() {
       if (!alive) return;
       if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
       if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
+      const canSend = api.hasCapability(
+        WidgetEventCapability.forRoomEvent(EventDirection.Send, GAME_EVENT).raw,
+      );
+      const canReceive = api.hasCapability(
+        WidgetEventCapability.forRoomEvent(EventDirection.Receive, GAME_EVENT).raw,
+      );
+      if (!canSend || !canReceive) {
+        setPermissionDenied(true);
+        setError(
+          'The Matrix client did not grant permission to send and receive game events. Review this widget’s permissions in your client, then reopen it.',
+        );
+        return;
+      }
+      setPermissionDenied(false);
       setError('');
       setConnected(true);
       void refresh();
@@ -87,7 +107,7 @@ export default function App() {
     connectionTimeout = window.setTimeout(() => {
       if (alive)
         setError(
-          'Element did not complete the widget handshake. Check that this widget is open in a supported Matrix client and its URL includes widgetId and userId.',
+          'The Matrix client did not complete the widget handshake. Check that the widget URL includes widgetId and userId.',
         );
     }, 15_000);
     return () => {
@@ -165,7 +185,13 @@ export default function App() {
         </header>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-300">
-          <span>{connected ? '● Connected to Element' : '○ Waiting for Element'}</span>
+          <span>
+            {connected
+              ? '● Ready to play'
+              : permissionDenied
+                ? '○ Permission needed'
+                : '○ Connecting…'}
+          </span>
           {userId && (
             <span>
               Playing as{' '}
@@ -184,7 +210,7 @@ export default function App() {
         )}
         {(!widgetId || !userId || window.parent === window) && (
           <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
-            <h2 className="text-xl font-bold">Open this in Element</h2>
+            <h2 className="text-xl font-bold">Open this in a Matrix room</h2>
             <p className="mt-2 text-slate-300">
               Add this page as a widget in a Matrix room. The room supplies the widget and player
               IDs.

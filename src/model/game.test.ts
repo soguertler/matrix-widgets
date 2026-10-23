@@ -171,6 +171,58 @@ test('only the host can cancel the current lobby', () => {
   assert.equal(gameFromEvents(events), null);
 });
 
+test('a player can leave and rejoin the lobby', () => {
+  const events = lobby(2);
+  events.push(event(players[1], { version: 2, kind: 'leave', gameId: 'one' }));
+  assert.deepEqual(gameFromEvents(events)?.joined, [players[0]]);
+  events.push(event(players[1], { version: 2, kind: 'join', gameId: 'one' }));
+  assert.deepEqual(gameFromEvents(events)?.joined, players.slice(0, 2));
+});
+
+test('leaving during play fills remaining turns so the game can finish', () => {
+  const events = lobby(2);
+  start(events, 2);
+  events.push(event(players[1], { version: 2, kind: 'leave', gameId: 'one' }));
+  assert.deepEqual(gameFromEvents(events)?.submissions.get(submissionKey(0, players[1]))?.entry, {
+    kind: 'text',
+    text: '(player left)',
+  });
+  events.push(
+    event(players[0], {
+      version: 2,
+      kind: 'submit',
+      gameId: 'one',
+      round: 0,
+      entry: { kind: 'text', text: 'a cat' },
+    }),
+  );
+  assert.equal(gameFromEvents(events)?.round, 1);
+  events.push(
+    event(players[0], {
+      version: 2,
+      kind: 'submit',
+      gameId: 'one',
+      round: 1,
+      entry: {
+        kind: 'drawing',
+        strokes: [
+          [
+            [1, 2],
+            [3, 4],
+          ],
+        ],
+      },
+    }),
+  );
+  const game = gameFromEvents(events)!;
+  assert.equal(game.phase, 'reveal');
+  assert.equal(game.submissions.size, 4);
+  assert.deepEqual(game.submissions.get(submissionKey(1, players[0]))?.entry, {
+    kind: 'drawing',
+    strokes: [],
+  });
+});
+
 test('submission size counts the full encoded event content', () => {
   const action: GameAction = {
     version: 2,

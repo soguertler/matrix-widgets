@@ -20,8 +20,8 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
         Lobby · {game.joined.length} player{game.joined.length === 1 ? '' : 's'}
       </h2>
       <p className="mt-2 text-sm text-slate-300">
-        Each person opens this widget in Element and joins here. The creator starts when everyone is
-        ready ({MIN_PLAYERS}–{MAX_PLAYERS} players).
+        Each person opens this widget in their Matrix client and joins here. The creator starts when
+        everyone is ready ({MIN_PLAYERS}–{MAX_PLAYERS} players).
       </p>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {game.joined.map((player) => {
@@ -81,6 +81,17 @@ export default function Lobby({ game, userId, connected, busy, members, avatarUr
           type="button"
         >
           Start game
+        </button>
+      )}
+      {!isOwner && game.joined.includes(userId) && (
+        <button
+          className="ml-3 mt-5 inline-flex items-center gap-2 rounded-xl border border-rose-400/60 px-5 py-3 font-bold text-rose-200 hover:bg-rose-950 disabled:opacity-50"
+          disabled={busy || !connected}
+          onClick={() => void send({ version: 2, kind: 'leave', gameId: game.id })}
+          type="button"
+        >
+          <X size={17} />
+          Leave game
         </button>
       )}
       {isOwner && (

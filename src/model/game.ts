@@ -44,6 +44,7 @@ export type Entry = { kind: 'text'; text: string } | { kind: 'drawing'; strokes:
 type Action =
   | { version: 2; kind: 'create'; gameId: string }
   | { version: 2; kind: 'join'; gameId: string }
+  | { version: 2; kind: 'leave'; gameId: string }
   | { version: 2; kind: 'cancel'; gameId: string }
   | { version: 2; kind: 'start'; gameId: string; players: string[] }
   | { version: 2; kind: 'submit'; gameId: string; round: number; entry: Entry }
@@ -58,6 +59,7 @@ export type Game = {
   owner: string;
   phase: 'lobby' | 'playing' | 'reveal';
   joined: string[];
+  left: string[];
   players: string[];
   steps: number;
   round: number;
@@ -139,7 +141,7 @@ function actionOf(event: GameEvent): Action | null {
   const content = event.content as Partial<Action>;
   if (content.version !== 2 || typeof content.gameId !== 'string') return null;
   if (
-    !['create', 'join', 'cancel', 'start', 'submit', 'expire', 'revealNext'].includes(
+    !['create', 'join', 'leave', 'cancel', 'start', 'submit', 'expire', 'revealNext'].includes(
       String(content.kind),
     )
   )
@@ -173,6 +175,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
         owner: event.sender,
         phase: 'lobby',
         joined: [event.sender],
+        left: [],
         players: [],
         steps: 0,
         round: 0,
@@ -188,6 +191,18 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
     } else if (action.kind === 'join' && game.phase === 'lobby') {
       if (!game.joined.includes(event.sender) && game.joined.length < MAX_PLAYERS)
         game.joined.push(event.sender);
+    } else if (action.kind === 'leave' && game.phase === 'lobby') {
+      if (event.sender !== game.owner)
+        game.joined = game.joined.filter((player) => player !== event.sender);
+    } else if (
+      action.kind === 'leave' &&
+      game.phase === 'playing' &&
+      game.players.includes(event.sender) &&
+      !game.left.includes(event.sender)
+    ) {
+      game.left.push(event.sender);
+      fillLeftTurns(game);
+      if (allSubmitted(game)) completeRound(game, event.origin_server_ts);
     } else if (action.kind === 'start' && game.phase === 'lobby' && event.sender === game.owner) {
       const roster = action.players;
       const joined = game.joined;
@@ -210,7 +225,7 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
       action.round === game.round
     ) {
       const book = bookOwner(game.players, event.sender, game.round);
-      if (!book) continue;
+      if (!book || game.left.includes(event.sender)) continue;
       const expectedKind = game.round % 2 === 1 ? 'drawing' : 'text';
       if (!validEntry(action.entry, expectedKind)) continue;
       const key = submissionKey(game.round, book);
@@ -250,12 +265,28 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
 }
 
 function completeRound(game: Game, timestamp: number): void {
-  if (game.round + 1 === game.steps) {
-    game.phase = 'reveal';
-    game.revealIndex = 1;
-  } else {
+  do {
+    if (game.round + 1 === game.steps) {
+      game.phase = 'reveal';
+      game.revealIndex = 1;
+      return;
+    }
     game.round += 1;
     game.roundStartedAt = timestamp;
+    fillLeftTurns(game);
+  } while (allSubmitted(game));
+}
+
+function fillLeftTurns(game: Game): void {
+  for (const player of game.left) {
+    const book = bookOwner(game.players, player, game.round)!;
+    const key = submissionKey(game.round, book);
+    if (game.submissions.has(key)) continue;
+    const entry: Entry =
+      game.round % 2 === 1
+        ? { kind: 'drawing', strokes: [] }
+        : { kind: 'text', text: '(player left)' };
+    game.submissions.set(key, { author: player, round: game.round, entry });
   }
 }
 

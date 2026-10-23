@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Timer } from 'lucide-react';
+import { LogOut, Timer } from 'lucide-react';
 import {
   allSubmitted,
   bookOwner,
@@ -33,7 +33,8 @@ export default function Playing({ game, userId, busy, send }: Props) {
     return () => window.clearInterval(timer);
   }, [game.roundStartedAt]);
 
-  const isPlayer = game.players.includes(userId);
+  const hasLeft = game.left.includes(userId);
+  const isPlayer = game.players.includes(userId) && !hasLeft;
   const myBook = bookOwner(game.players, userId, game.round);
   const previous = previousEntry(game, userId);
   const submitted = submittedForPlayer(game, userId);
@@ -154,8 +155,21 @@ export default function Playing({ game, userId, busy, send }: Props) {
       )}
       {!isPlayer && (
         <p className="mt-5 text-slate-300">
-          This game is in progress. You can watch the reveal when it finishes.
+          {hasLeft
+            ? 'You left this game. You can watch the reveal when it finishes.'
+            : 'This game is in progress. You can watch the reveal when it finishes.'}
         </p>
+      )}
+      {isPlayer && (
+        <button
+          className="mt-5 inline-flex items-center gap-2 rounded-xl border border-rose-400/60 px-4 py-2 text-sm font-bold text-rose-200 hover:bg-rose-950 disabled:opacity-50"
+          disabled={busy}
+          onClick={() => void send({ version: 2, kind: 'leave', gameId: game.id })}
+          type="button"
+        >
+          <LogOut size={16} />
+          Leave game
+        </button>
       )}
     </section>
   );
