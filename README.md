@@ -52,3 +52,6 @@ pnpm build
 inlined. Run `pnpm fmt` to format the
 source. Source code is organized under `src/model/`, `src/drawing/`,
 `src/matrix/`, and `src/components/`.
+
+Pushes to `main` build and publish `index.html` as a GitHub Release asset.
+The newest build is available from the repository's `releases/latest` page.

@@ -1,0 +1,40 @@
+name: Publish widget release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: widget-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test && pnpm lint && pnpm fmt:check && pnpm build
+      - name: Publish standalone HTML
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="build-${GITHUB_SHA}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" dist/index.html \
+              --target "$GITHUB_SHA" \
+              --title "Doodle Phone ${GITHUB_SHA::7}" \
+              --notes "Standalone widget build from ${GITHUB_SHA}." \
+              --latest
+          fi
