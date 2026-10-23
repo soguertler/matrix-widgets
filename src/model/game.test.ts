@@ -4,6 +4,7 @@ import {
   bookOwner,
   gameEventBytes,
   gameFromEvents,
+  gamesFromEvents,
   MAX_GAME_EVENT_BYTES,
   MAX_PLAYERS,
   previousEntry,
@@ -182,6 +183,19 @@ test('new lobby cannot displace a game in progress', () => {
   start(events, 2);
   events.push(event(players[1], { version: 2, kind: 'create', gameId: 'two' }));
   assert.equal(gameFromEvents(events)?.id, 'one');
+});
+
+test('a new lobby keeps the latest completed reveal available', () => {
+  const events = lobby(2);
+  start(events, 2);
+  submitRound(events, 2, 0);
+  submitRound(events, 2, 1);
+  events.push(event(players[1], { version: 2, kind: 'create', gameId: 'two' }));
+  const games = gamesFromEvents(events);
+  assert.equal(games.current?.id, 'two');
+  assert.equal(games.current?.phase, 'lobby');
+  assert.equal(games.previousReveal?.id, 'one');
+  assert.equal(games.previousReveal?.submissions.size, 4);
 });
 
 test('only the host can cancel the current lobby', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LogOut, Timer } from 'lucide-react';
 import {
   allSubmitted,
@@ -12,6 +12,7 @@ import {
   type Stroke,
 } from '../model/game';
 import RoundEntry, { DrawingPad } from './RoundEntry';
+import { clearTurnDraft, readTurnDraft, saveTurnDraft } from './turnDraft';
 
 type Props = {
   game: Game;
@@ -21,8 +22,12 @@ type Props = {
 };
 
 export default function Playing({ game, userId, busy, send }: Props) {
-  const [text, setText] = useState('');
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const restored = useMemo(
+    () => readTurnDraft(game.id, game.round, userId),
+    [game.id, game.round, userId],
+  );
+  const [text, setText] = useState(restored.text);
+  const [strokes, setStrokes] = useState<Stroke[]>(restored.strokes);
   const [drawingWorking, setDrawingWorking] = useState(false);
   const [lastSentAt, setLastSentAt] = useState(0);
   const [now, setNow] = useState(Date.now());
@@ -38,6 +43,9 @@ export default function Playing({ game, userId, busy, send }: Props) {
   const myBook = bookOwner(game.players, userId, game.round);
   const previous = previousEntry(game, userId);
   const submitted = submittedForPlayer(game, userId);
+  useEffect(() => {
+    if (submitted) clearTurnDraft(game.id, game.round, userId);
+  }, [submitted, game.id, game.round, userId]);
   const complete = allSubmitted(game);
   const submittedCount = game.players.filter((player) => {
     const book = bookOwner(game.players, player, game.round);
@@ -129,7 +137,11 @@ export default function Playing({ game, userId, busy, send }: Props) {
           {roundIsDrawing ? (
             <DrawingPad
               key={`${game.id}-${game.round}-${userId}`}
-              onChange={setStrokes}
+              initialStrokes={restored.strokes}
+              onChange={(next) => {
+                setStrokes(next);
+                saveTurnDraft(game.id, game.round, userId, { text, strokes: next });
+              }}
               onWorkingChange={setDrawingWorking}
             />
           ) : (
@@ -142,7 +154,10 @@ export default function Playing({ game, userId, busy, send }: Props) {
                   game.round === 0 ? 'A penguin driving a tiny bus…' : 'Write your guess…'
                 }
                 value={text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  saveTurnDraft(game.id, game.round, userId, { text: event.target.value, strokes });
+                }}
               />
             </label>
           )}

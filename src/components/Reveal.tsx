@@ -7,14 +7,14 @@ import RoundEntry from './RoundEntry';
 
 export default function Reveal({
   game,
-  userId,
   busy,
   send,
+  allowNewGame = false,
 }: {
   game: Game;
-  userId: string;
   busy: boolean;
   send: (action: GameAction) => Promise<boolean>;
+  allowNewGame?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [exporting, setExporting] = useState(false);
@@ -74,7 +74,7 @@ export default function Reveal({
             {exportError}
           </p>
         )}
-        {game.owner === userId && index + 1 === total && (
+        {allowNewGame && (
           <button
             className="mt-4 rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 disabled:opacity-50"
             disabled={busy}

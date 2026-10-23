@@ -74,7 +74,7 @@ export function gameEventBytes(action: GameAction): number {
   return new TextEncoder().encode(JSON.stringify(action)).length;
 }
 
-function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is Entry {
+export function validEntry(entry: unknown, expectedKind: 'text' | 'drawing'): entry is Entry {
   if (!entry || typeof entry !== 'object') return false;
   if (expectedKind === 'text') {
     const text = (entry as { text?: unknown }).text;
@@ -162,17 +162,22 @@ export function submissionKey(round: number, book: string): string {
   return `${round}:${book}`;
 }
 
-export function gameFromEvents(input: GameEvent[]): Game | null {
+export function gamesFromEvents(input: GameEvent[]): {
+  current: Game | null;
+  previousReveal: Game | null;
+} {
   const events = [...input].sort(
     (a, b) => a.origin_server_ts - b.origin_server_ts || a.event_id.localeCompare(b.event_id),
   );
   let game: Game | null = null;
+  let previousReveal: Game | null = null;
 
   for (const event of events) {
     const action = actionOf(event);
     if (!action) continue;
     if (action.kind === 'create') {
       if (game && game.phase !== 'reveal') continue;
+      if (game?.phase === 'reveal') previousReveal = game;
       game = {
         id: action.gameId,
         owner: event.sender,
@@ -261,7 +266,11 @@ export function gameFromEvents(input: GameEvent[]): Game | null {
       completeRound(game, event.origin_server_ts);
     }
   }
-  return game;
+  return { current: game, previousReveal };
+}
+
+export function gameFromEvents(input: GameEvent[]): Game | null {
+  return gamesFromEvents(input).current;
 }
 
 function completeRound(game: Game, timestamp: number): void {

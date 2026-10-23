@@ -22,7 +22,10 @@ state events, and download profile images. All players use the same room and
 widget. The host creates and starts the game with 2–14 players, chooses 2–N
 turns per story, and sets a one-, two-, or three-minute timer. Rounds advance
 when everyone submits; missing turns are marked as timed out. Players browse
-the reveal independently and can export each story as a PNG.
+the reveal independently and can export each story as a PNG. Any room member
+can create the next lobby; the latest completed reveal remains accessible while
+that lobby is open. Unsubmitted text and drawings are saved in the browser tab's
+session storage and restored after a reload when the client permits storage.
 
 ## Use a release
 

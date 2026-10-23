@@ -17,6 +17,7 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, fillRegion, rasterize } from './fill';
 type Props = {
   onChange: (strokes: Stroke[]) => void;
   onWorkingChange?: (working: boolean) => void;
+  initialStrokes?: Stroke[];
 };
 const WIDTH = CANVAS_WIDTH;
 const HEIGHT = CANVAS_HEIGHT;
@@ -100,14 +101,14 @@ const tools: { id: DrawTool; icon: LucideIcon; label: string }[] = [
   { id: 'fill', icon: PaintBucket, label: 'Fill area' },
 ];
 
-export default function DrawingPad({ onChange, onWorkingChange }: Props) {
+export default function DrawingPad({ onChange, onWorkingChange, initialStrokes = [] }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const strokesRef = useRef<Stroke[]>([]);
+  const strokesRef = useRef<Stroke[]>(initialStrokes);
   const undoRef = useRef<Stroke[][]>([]);
   const redoRef = useRef<Stroke[][]>([]);
   const drawingRef = useRef(false);
   const fillingRef = useRef(false);
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes);
   const [, setHistoryTick] = useState(0);
   const [tool, setTool] = useState<DrawTool>('pen');
   const [color, setColor] = useState<(typeof DRAW_COLORS)[number]>('#111827');
