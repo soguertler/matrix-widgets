@@ -34,11 +34,7 @@ terminal.loadAddon(fitAddon);
 terminal.open(terminalElement);
 fitAddon.fit();
 new ResizeObserver(() => fitAddon.fit()).observe(terminalElement);
-terminal.writeln(
-  'Press “Boot Linux” to start. Downloads about 13 MB of emulator and system files.',
-);
 const power = document.querySelector<HTMLButtonElement>('#power')!;
-const restart = document.querySelector<HTMLButtonElement>('#restart')!;
 const keyButtons = [
   document.querySelector<HTMLButtonElement>('#ctrl-c')!,
   document.querySelector<HTMLButtonElement>('#ctrl-d')!,
@@ -51,8 +47,8 @@ const downloadButton = downloadForm.querySelector<HTMLButtonElement>('button')!;
 const fileStatus = document.querySelector<HTMLElement>('#file-status')!;
 
 let emulator: V86 | undefined;
-let widgetfetchBytes: Uint8Array | undefined;
-let micropythonBytes: Uint8Array | undefined;
+const guestCommandNames = ['widgetfetch', 'micropython', 'snake', 'btop'] as const;
+let guestCommands: Map<string, Uint8Array> | undefined;
 let booting = false;
 let ready = false;
 let configuring = false;
@@ -68,7 +64,11 @@ const guestSetup = [
   'udhcpc -i eth0 -q -n -t 3 -T 2',
   'cp /mnt/widgetfetch /usr/bin/widgetfetch',
   'cp /mnt/micropython /usr/bin/micropython',
-  'chmod +x /usr/bin/widgetfetch /usr/bin/micropython',
+  'chmod +x /usr/bin/widgetfetch /usr/bin/micropython /mnt/snake /mnt/btop',
+  'ln -sf /mnt/snake /usr/bin/snake',
+  `stty rows ${terminal.rows} cols ${terminal.cols}`,
+  `printf '%s\\n' '#!/bin/sh' 'exec /mnt/btop --force-utf "$@"' > /usr/bin/btop`,
+  'chmod +x /usr/bin/btop',
   'ln -sf widgetfetch /usr/bin/fetch',
   'ln -sf micropython /usr/bin/python',
   'export TERM=xterm',
@@ -82,10 +82,11 @@ function setStatus(message: string) {
 
 async function configureGuest() {
   const active = emulator;
-  if (!active || !widgetfetchBytes || !micropythonBytes) return;
+  if (!active || !guestCommands) return;
   try {
-    await active.create_file('/widgetfetch', widgetfetchBytes);
-    await active.create_file('/micropython', micropythonBytes);
+    for (const [name, bytes] of guestCommands) {
+      await active.create_file(`/${name}`, bytes);
+    }
     if (active !== emulator) return;
     active.serial0_send(`${[...guestSetup, finishSetup, 'widgetfetch'].join('; ')}\n`);
   } catch (error) {
@@ -119,6 +120,8 @@ function appendOutput(byte: number) {
       return;
     }
     ready = true;
+    power.setAttribute('aria-label', 'Restart Linux');
+    power.title = 'Restart Linux';
     keyButtons.forEach((button) => (button.disabled = false));
     upload.disabled = false;
     downloadPath.disabled = false;
@@ -138,8 +141,8 @@ async function boot() {
   markerTail = '';
   skipMarkerLine = false;
   power.disabled = true;
-  restart.disabled = true;
-  restart.hidden = true;
+  power.setAttribute('aria-label', 'Boot Linux');
+  power.title = 'Boot Linux';
   keyButtons.forEach((button) => (button.disabled = true));
   upload.disabled = true;
   downloadPath.disabled = true;
@@ -154,15 +157,15 @@ async function boot() {
       emulator = undefined;
       await previous.destroy();
     }
-    const [widgetfetchResponse, micropythonResponse] = await Promise.all([
-      window.fetch(asset('widgetfetch')),
-      window.fetch(asset('micropython')),
-    ]);
-    if (!widgetfetchResponse.ok || !micropythonResponse.ok) {
-      throw new Error('Could not load guest commands');
-    }
-    widgetfetchBytes = new Uint8Array(await widgetfetchResponse.arrayBuffer());
-    micropythonBytes = new Uint8Array(await micropythonResponse.arrayBuffer());
+    guestCommands = new Map(
+      await Promise.all(
+        guestCommandNames.map(async (name) => {
+          const response = await window.fetch(asset(name));
+          if (!response.ok) throw new Error(`Could not load ${name}`);
+          return [name, new Uint8Array(await response.arrayBuffer())] as const;
+        }),
+      ),
+    );
     const active = new V86({
       wasm_path: asset('v86.wasm'),
       memory_size: 64 * 1024 * 1024,
@@ -199,18 +202,16 @@ async function boot() {
       power.disabled = false;
       booting = false;
     });
-    restart.hidden = false;
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'Linux could not start');
     power.disabled = false;
   } finally {
     booting = false;
-    restart.disabled = false;
+    power.disabled = false;
   }
 }
 
 power.addEventListener('click', () => void boot());
-restart.addEventListener('click', () => void boot());
 terminal.onData((data) => {
   if (ready) emulator?.serial0_send(data);
 });

@@ -10,14 +10,27 @@
     <main>
       <header>
         <div>
-          <p class="eyebrow">Browser Linux</p>
           <h1>Widget Linux</h1>
-          <p class="subtitle">A small Buildroot system running locally in this browser tab.</p>
         </div>
         <div class="actions">
-          <span id="status" role="status">Ready to boot</span>
-          <button id="power" type="button">Boot Linux</button>
-          <button id="restart" type="button" hidden>Restart</button>
+          <span id="status" role="status"></span>
+          <button id="power" type="button" aria-label="Boot Linux" title="Boot Linux">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2v10" />
+              <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+            </svg>
+          </button>
         </div>
       </header>
       <section class="terminal-card" aria-label="Linux terminal">
@@ -43,12 +56,6 @@
         </form>
       </div>
       <p id="file-status" role="status" class="file-status"></p>
-      <p class="hint">
-        Try <code>widgetfetch</code> (or <code>fetch</code>), <code>python</code>, or
-        <code>ls /mnt</code>. Press Ctrl+D to leave Python. Uploaded files and guest changes
-        disappear when you restart. Click the terminal to type. Network requests use your browser
-        and may be limited by site CORS rules.
-      </p>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -55,7 +55,14 @@ Run `micropython` or its `python` alias for the REPL, or use
 `python -c 'print(6 * 7)'` for a command. Press Ctrl+D to exit the REPL;
 the minimal MicroPython build does not provide `exit()`.
 The build recipe is `packages/linux/scripts/build-micropython.sh`, and its
-upstream license is included with the binary. Networking uses v86's browser `fetch` backend, so HTTP access
+upstream license is included with the binary. The widget also includes
+[`terminal-snake`](https://github.com/tbpaolini/terminal-snake) as `snake` and
+[`btop`](https://github.com/aristocratos/btop) as `btop`. Both are static 32-bit
+binaries, with their upstream licenses included. Rebuild them with
+`sh packages/linux/scripts/build-snake.sh` and
+`sh packages/linux/scripts/build-btop.sh`. Snake uses arrow keys; press Ctrl+C
+to leave it. Press Q to leave btop. The single power button starts or restarts the
+guest. Networking uses v86's browser `fetch` backend, so HTTP access
 depends on browser CORS rules; it is not unrestricted network access. Restart
 discards the instance's files. The
 host must permit WebAssembly and serve the `.wasm` and `.bin` files from the
@@ -69,8 +76,9 @@ Add the hosted URL as a room widget, including the parameters shown above. The
 GitHub release URL downloads the file; it is not a widget hosting URL.
 
 The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
-`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `widgetfetch`, `micropython`, and
-`micropython-LICENSE.txt`. Host these files together
+`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `widgetfetch`, `micropython`,
+`micropython-LICENSE.txt`, `snake`, `snake-LICENSE.txt`, `btop`, and
+`btop-LICENSE.txt`. Host these files together
 on an HTTPS origin that allows iframe embedding. The Linux widget does not
 need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix
 widget URL so it can complete the client's loading handshake.
