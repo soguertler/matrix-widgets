@@ -1,5 +1,20 @@
+import { WidgetApi } from 'matrix-widget-api';
 import { V86 } from 'v86';
 import './style.css';
+
+// Element keeps its loading overlay until the widget announces that its UI loaded.
+const widgetId = new URLSearchParams(window.location.search).get('widgetId');
+if (window.parent !== window && widgetId) {
+  const widgetApi = new WidgetApi(widgetId, '*');
+  let loadedRetry: number | undefined;
+  widgetApi.on('ready', () => {
+    if (loadedRetry !== undefined) window.clearInterval(loadedRetry);
+  });
+  widgetApi.start();
+  const notifyLoaded = () => void widgetApi.sendContentLoaded().catch(() => undefined);
+  notifyLoaded();
+  loadedRetry = window.setInterval(notifyLoaded, 3000);
+}
 
 const status = document.querySelector<HTMLElement>('#status')!;
 const terminal = document.querySelector<HTMLElement>('#terminal')!;

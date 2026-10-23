@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Linux terminal">
+  <defs>
+    <linearGradient id="shell" x2="1" y2="1">
+      <stop stop-color="#142c3b"/>
+      <stop offset="1" stop-color="#07131d"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#47d99b"/>
+  <rect x="12" y="19" width="104" height="89" rx="13" fill="url(#shell)"/>
+  <path d="M12 32a13 13 0 0 1 13-13h78a13 13 0 0 1 13 13v11H12z" fill="#244457"/>
+  <circle cx="25" cy="31" r="4" fill="#ff8076"/>
+  <circle cx="38" cy="31" r="4" fill="#ffcf70"/>
+  <circle cx="51" cy="31" r="4" fill="#66dea6"/>
+  <path d="m31 60 17 16-17 16" fill="none" stroke="#72efb3" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M58 92h34" stroke="#e6fff2" stroke-width="9" stroke-linecap="round"/>
+</svg>

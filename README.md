@@ -55,9 +55,10 @@ Add the hosted URL as a room widget, including the parameters shown above. The
 GitHub release URL downloads the file; it is not a widget hosting URL.
 
 The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
-`vgabios.bin`, and `buildroot-bzimage68.bin`. Host those five files together
+`vgabios.bin`, `buildroot-bzimage68.bin`, and `icon.svg`. Host these files together
 on an HTTPS origin that allows iframe embedding. The Linux widget does not
-need Matrix URL parameters or room-event permission.
+need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix
+widget URL so it can complete the client's loading handshake.
 
 ## Protocol
 

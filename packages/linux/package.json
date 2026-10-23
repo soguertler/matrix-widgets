@@ -12,6 +12,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort"
   },
   "dependencies": {
+    "matrix-widget-api": "catalog:",
     "v86": "0.5.472"
   },
   "devDependencies": {
