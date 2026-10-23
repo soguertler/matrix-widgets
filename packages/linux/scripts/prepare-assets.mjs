@@ -39,10 +39,16 @@ for (const asset of assets) {
     // Fetch a missing asset below.
   }
 
-  const bytes =
-    asset.url instanceof URL
-      ? await readFile(fileURLToPath(asset.url))
-      : Buffer.from(await (await fetch(asset.url)).arrayBuffer());
+  let bytes;
+  if (asset.url instanceof URL) {
+    bytes = await readFile(fileURLToPath(asset.url));
+  } else {
+    const response = await fetch(asset.url);
+    if (!response.ok) {
+      throw new Error(`Could not download ${asset.name}: HTTP ${response.status}`);
+    }
+    bytes = Buffer.from(await response.arrayBuffer());
+  }
   if (hash(bytes) !== asset.sha256) {
     throw new Error(`Checksum mismatch for ${asset.name}`);
   }

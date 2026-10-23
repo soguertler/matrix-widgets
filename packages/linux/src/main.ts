@@ -63,6 +63,16 @@ let skipMarkerLine = false;
 
 const readyMarker = '__WIDGET_LINUX_READY__';
 const finishSetup = "clear; printf '%s%s\\n' __WIDGET_ LINUX_READY__";
+const guestSetup = [
+  'hostname widget-linux',
+  'udhcpc -i eth0 -q -n -t 3 -T 2',
+  'cp /mnt/widgetfetch /usr/bin/widgetfetch',
+  'cp /mnt/micropython /usr/bin/micropython',
+  'chmod +x /usr/bin/widgetfetch /usr/bin/micropython',
+  'ln -sf widgetfetch /usr/bin/fetch',
+  'ln -sf micropython /usr/bin/python',
+  'export TERM=xterm',
+];
 
 const asset = (name: string) => new URL(name, document.baseURI).href;
 
@@ -73,20 +83,15 @@ function setStatus(message: string) {
 async function configureGuest() {
   const active = emulator;
   if (!active || !widgetfetchBytes || !micropythonBytes) return;
-  setStatus('Configuring Widget Linux…');
   try {
     await active.create_file('/widgetfetch', widgetfetchBytes);
     await active.create_file('/micropython', micropythonBytes);
     if (active !== emulator) return;
-    active.serial0_send(
-      `hostname widget-linux; udhcpc -i eth0 -q -n -t 3 -T 2; cp /mnt/widgetfetch /usr/bin/widgetfetch; cp /mnt/micropython /usr/bin/micropython; chmod +x /usr/bin/widgetfetch /usr/bin/micropython; ln -sf widgetfetch /usr/bin/fetch; ln -sf micropython /usr/bin/python; export TERM=xterm; ${finishSetup}; widgetfetch\n`,
-    );
+    active.serial0_send(`${[...guestSetup, finishSetup, 'widgetfetch'].join('; ')}\n`);
   } catch (error) {
     fileStatus.textContent = `Could not install guest commands: ${String(error)}`;
     if (active === emulator) {
-      active.serial0_send(
-        `hostname widget-linux; udhcpc -i eth0 -q -n -t 3 -T 2; ${finishSetup}\n`,
-      );
+      active.serial0_send(`${guestSetup.slice(0, 2).join('; ')}; ${finishSetup}\n`);
     }
   }
 }
@@ -133,6 +138,7 @@ async function boot() {
   markerTail = '';
   skipMarkerLine = false;
   power.disabled = true;
+  restart.disabled = true;
   restart.hidden = true;
   keyButtons.forEach((button) => (button.disabled = true));
   upload.disabled = true;
@@ -142,12 +148,12 @@ async function boot() {
   terminal.reset();
   setStatus('Loading Linux…');
 
-  if (emulator) {
-    await emulator.destroy();
-    emulator = undefined;
-  }
-
   try {
+    if (emulator) {
+      const previous = emulator;
+      emulator = undefined;
+      await previous.destroy();
+    }
     const [widgetfetchResponse, micropythonResponse] = await Promise.all([
       window.fetch(asset('widgetfetch')),
       window.fetch(asset('micropython')),
@@ -157,7 +163,7 @@ async function boot() {
     }
     widgetfetchBytes = new Uint8Array(await widgetfetchResponse.arrayBuffer());
     micropythonBytes = new Uint8Array(await micropythonResponse.arrayBuffer());
-    emulator = new V86({
+    const active = new V86({
       wasm_path: asset('v86.wasm'),
       memory_size: 64 * 1024 * 1024,
       vga_memory_size: 2 * 1024 * 1024,
@@ -172,17 +178,23 @@ async function boot() {
       disable_speaker: true,
       autostart: true,
     });
-    emulator.add_listener('serial0-output-byte', (byte) => {
+    emulator = active;
+    active.add_listener('serial0-output-byte', (byte) => {
+      if (emulator !== active) return;
       appendOutput(byte);
     });
-    emulator.add_listener('download-progress', ({ file_name, loaded, total }) => {
+    active.add_listener('download-progress', ({ file_name, loaded, total }) => {
+      if (emulator !== active) return;
       const name = file_name.split('/').pop() ?? 'file';
       setStatus(
         total ? `Loading ${name} · ${Math.round((loaded / total) * 100)}%` : `Loading ${name}…`,
       );
     });
-    emulator.add_listener('emulator-started', () => setStatus('Linux is starting…'));
-    emulator.add_listener('download-error', ({ file_name }) => {
+    active.add_listener('emulator-started', () => {
+      if (emulator === active) setStatus('Linux is starting…');
+    });
+    active.add_listener('download-error', ({ file_name }) => {
+      if (emulator !== active) return;
       setStatus(`Could not load ${file_name.split('/').pop() ?? 'asset'}`);
       power.disabled = false;
       booting = false;
@@ -193,6 +205,7 @@ async function boot() {
     power.disabled = false;
   } finally {
     booting = false;
+    restart.disabled = false;
   }
 }
 
