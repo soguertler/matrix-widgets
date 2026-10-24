@@ -111,19 +111,37 @@ importers:
 
   packages/linux:
     dependencies:
+      '@widget-games/widget-shared':
+        specifier: workspace:^
+        version: link:../widget-shared
       '@xterm/addon-fit':
         specifier: 0.11.0
         version: 0.11.0
       '@xterm/xterm':
         specifier: 6.0.0
         version: 6.0.0
-      matrix-widget-api:
+      lucide-react:
         specifier: 'catalog:'
-        version: 1.20.0
+        version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
+      react:
+        specifier: 'catalog:'
+        version: 19.3.1
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.1(react@19.3.1)
       v86:
         specifier: 0.5.472
         version: 0.5.472
     devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
       '@widget-games/tsconfig':
         specifier: workspace:^
         version: link:../tsconfig
