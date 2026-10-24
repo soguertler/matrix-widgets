@@ -33,9 +33,9 @@ jobs:
         run: |
           tag="build-${GITHUB_SHA}"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" release/* \
+            gh release create "$tag" release/matrix-widgets.zip \
               --target "$GITHUB_SHA" \
               --title "Matrix Widgets ${GITHUB_SHA::7}" \
-              --notes "Doodle Phone, Sketch & Guess, and Linux widget builds from ${GITHUB_SHA}. Serve linux.html with all accompanying assets in the same directory." \
+              --notes "All Matrix widgets from ${GITHUB_SHA} in one ZIP. Extract and host the widget folders; each contains index.html and its companion files." \
               --latest
           fi

@@ -37,20 +37,20 @@ Linux's first development/build run downloads checksum-verified kernel and BIOS
 assets and copies v86's WebAssembly runtime into `packages/linux/public`. It needs
 network access for missing assets. Subsequent runs reuse verified files.
 
-| Command                                                    | What it does                                       |
-| ---------------------------------------------------------- | -------------------------------------------------- |
-| `pnpm build`                                               | Typecheck the workspace and build every app        |
-| `pnpm typecheck`                                           | Check all app and shared-package types             |
-| `pnpm test`                                                | Run all package tests                              |
-| `pnpm lint`                                                | Lint workspace source and scripts                  |
-| `pnpm fmt` / `pnpm fmt:check`                              | Format / check source, config, workflows, and docs |
-| `pnpm check`                                               | Formatting, lint, tests, typechecking, and builds  |
-| `pnpm preview`                                             | Serve all production builds on ports 4173–4175     |
-| `pnpm preview:doodle` / `preview:sketch` / `preview:linux` | Preview one app                                    |
-| `pnpm assets:linux`                                        | Prepare and verify Linux runtime assets            |
-| `pnpm guest:build`                                         | Rebuild the custom Linux guest commands            |
-| `pnpm release:prepare`                                     | Build and collect deployable files in `release/`   |
-| `pnpm clean`                                               | Remove app builds and staged releases              |
+| Command                                                    | What it does                                        |
+| ---------------------------------------------------------- | --------------------------------------------------- |
+| `pnpm build`                                               | Typecheck the workspace and build every app         |
+| `pnpm typecheck`                                           | Check all app and shared-package types              |
+| `pnpm test`                                                | Run all package tests                               |
+| `pnpm lint`                                                | Lint workspace source and scripts                   |
+| `pnpm fmt` / `pnpm fmt:check`                              | Format / check source, config, workflows, and docs  |
+| `pnpm check`                                               | Formatting, lint, tests, typechecking, and builds   |
+| `pnpm preview`                                             | Serve all production builds on ports 4173–4175      |
+| `pnpm preview:doodle` / `preview:sketch` / `preview:linux` | Preview one app                                     |
+| `pnpm assets:linux`                                        | Prepare and verify Linux runtime assets             |
+| `pnpm guest:build`                                         | Rebuild the custom Linux guest commands             |
+| `pnpm release:prepare`                                     | Build `release/matrix-widgets.zip` (requires `zip`) |
+| `pnpm clean`                                               | Remove app builds and staged releases               |
 
 Run a package command directly with `pnpm --filter @matrix-widgets/<package> <command>`.
 To add an app, create a package under `packages/`, use the shared TypeScript config,
@@ -64,10 +64,10 @@ Serve builds over HTTPS from a host that permits embedding by your Matrix client
 Add the app URL as a room widget, with these substituted parameters:
 
 ```text
-https://your-widget-host.example/doodle-phone.html?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id
+https://your-widget-host.example/doodle-phone/index.html?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id
 ```
 
-Use `sketch-guess.html` or `linux.html` for the other widgets. Sketch & Guess also
+Use `sketch-guess/index.html` or `linux/index.html` for the other widgets. Sketch & Guess also
 needs `&deviceId=$matrix_device_id`. Parameters may be supplied in the query string
 or fragment. Games require the host to grant room-event send/receive permissions,
 room-member state access, and profile-image downloads.
@@ -137,9 +137,33 @@ The terminal also runs outside Matrix without requiring a widget connection.
 Each app writes `dist/index.html` with inlined application CSS and JavaScript.
 The two games are standalone HTML files. Linux additionally needs the kernel, BIOS,
 WebAssembly runtime, icon, guest commands, and accompanying license alongside its
-HTML. Do not deploy `linux.html` on its own.
+HTML. Deploy the entire Linux folder together.
 
-`pnpm release:prepare` collects all three named HTML files and Linux companion files
-in `release/`. Host that directory, or download the same assets from GitHub Releases.
-Release download links are not embeddable hosting URLs. Pushes to `main` run all
-checks and publish the complete asset set using `.github/workflows/release-widget.yml`.
+`pnpm release:prepare` builds and creates `release/matrix-widgets.zip` using the
+`zip` command-line tool (install it locally if needed; GitHub's Ubuntu runners
+include it). GitHub Releases publish this single ZIP, containing:
+
+```text
+doodle-phone/
+  index.html
+sketch-guess/
+  index.html
+linux/
+  index.html
+  buildroot-bzimage68.bin
+  seabios.bin
+  vgabios.bin
+  v86.wasm
+  icon.svg
+  widgetfetch
+  micropython
+  micropython-LICENSE.txt
+  top
+  snake
+```
+
+Extract the ZIP and host its folders over HTTPS. Each widget's URL is
+`/<widget>/index.html` with the Matrix parameters described above. Release download
+links are not embeddable hosting URLs. The unpacked folders are also available in
+`release/` for local inspection. Pushes to `main` run all checks and publish the ZIP
+using `.github/workflows/release-widget.yml`.
