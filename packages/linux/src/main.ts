@@ -47,7 +47,7 @@ const downloadButton = downloadForm.querySelector<HTMLButtonElement>('button')!;
 const fileStatus = document.querySelector<HTMLElement>('#file-status')!;
 
 let emulator: V86 | undefined;
-const guestCommandNames = ['widgetfetch', 'micropython', 'snake', 'btop'] as const;
+const guestCommandNames = ['widgetfetch', 'micropython', 'snake', 'top'] as const;
 let guestCommands: Map<string, Uint8Array> | undefined;
 let booting = false;
 let ready = false;
@@ -64,11 +64,10 @@ const guestSetup = [
   'udhcpc -i eth0 -q -n -t 3 -T 2',
   'cp /mnt/widgetfetch /usr/bin/widgetfetch',
   'cp /mnt/micropython /usr/bin/micropython',
-  'chmod +x /usr/bin/widgetfetch /usr/bin/micropython /mnt/snake /mnt/btop',
+  'chmod +x /usr/bin/widgetfetch /usr/bin/micropython /mnt/snake /mnt/top',
   'ln -sf /mnt/snake /usr/bin/snake',
   `stty rows ${terminal.rows} cols ${terminal.cols}`,
-  `printf '%s\\n' '#!/bin/sh' 'exec /mnt/btop --force-utf "$@"' > /usr/bin/btop`,
-  'chmod +x /usr/bin/btop',
+  'ln -sf /mnt/top /usr/bin/top',
   'ln -sf widgetfetch /usr/bin/fetch',
   'ln -sf micropython /usr/bin/python',
   'export TERM=xterm',
