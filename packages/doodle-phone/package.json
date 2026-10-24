@@ -12,7 +12,6 @@
   "dependencies": {
     "@widget-games/widget-shared": "workspace:^",
     "lucide-react": "catalog:",
-    "matrix-widget-api": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

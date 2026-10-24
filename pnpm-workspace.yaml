@@ -2,6 +2,7 @@ packages:
   - 'packages/*'
 
 catalog:
+  '@matrix-widget-toolkit/api': 5.1.1
   '@tailwindcss/vite': ^4.1.0
   '@tsconfig/strictest': ^2.0.8
   '@tsconfig/vite-react': ^8.0.6

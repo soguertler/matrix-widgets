@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Maximize2 } from 'lucide-react';
-import { MatrixCapabilities } from 'matrix-widget-api';
+import { MatrixCapabilities } from '@widget-games/widget-shared';
 import {
   displayName,
   useRoomEventChannel,

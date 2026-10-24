@@ -9,10 +9,10 @@
     "test": "node --experimental-strip-types --test src/model/*.test.ts src/matrix/*.test.ts"
   },
   "dependencies": {
+    "@matrix-widget-toolkit/api": "catalog:",
     "@widget-games/widget-shared": "workspace:^",
     "livekit-client": "catalog:",
     "lucide-react": "catalog:",
-    "matrix-widget-api": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

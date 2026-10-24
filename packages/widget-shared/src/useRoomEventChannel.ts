@@ -1,8 +1,9 @@
+import { type WidgetApi } from '@matrix-widget-toolkit/api';
+import { createWidgetClient } from './widgetClient';
 import { useEffect, useRef, useState } from 'react';
 import {
   EventDirection,
   MatrixCapabilities,
-  WidgetApi,
   WidgetEventCapability,
   type IRoomEvent,
 } from 'matrix-widget-api';
@@ -44,14 +45,21 @@ export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends ob
 
   useEffect(() => {
     if (!enabled || !widgetId) return;
-    const widgetApi = new WidgetApi(widgetId, '*');
-    apiRef.current = widgetApi;
-    setApi(widgetApi);
-    widgetApi.requestCapabilityToSendEvent(eventType);
-    widgetApi.requestCapabilityToReceiveEvent(eventType);
-    widgetApi.requestCapabilityToReceiveState('m.room.member');
-    widgetApi.requestCapability(MatrixCapabilities.MSC4039DownloadFile);
-    for (const capability of capabilities) widgetApi.requestCapability(capability);
+    const required = [
+      WidgetEventCapability.forRoomEvent(EventDirection.Send, eventType),
+      WidgetEventCapability.forRoomEvent(EventDirection.Receive, eventType),
+    ];
+    const client = createWidgetClient(widgetId, {
+      capabilities: [
+        ...required,
+        WidgetEventCapability.forStateEvent(EventDirection.Receive, 'm.room.member'),
+        MatrixCapabilities.MSC4039DownloadFile,
+        ...capabilities,
+      ],
+    });
+    const widgetApi = client.matrixWidgetApi;
+    apiRef.current = client;
+    setApi(client);
     let alive = true;
     let pollTimer: number | undefined;
     let contentLoadedRetry: number | undefined;
@@ -82,13 +90,7 @@ export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends ob
       if (!alive) return;
       if (contentLoadedRetry !== undefined) window.clearInterval(contentLoadedRetry);
       if (connectionTimeout !== undefined) window.clearTimeout(connectionTimeout);
-      const canSend = widgetApi.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Send, eventType).raw,
-      );
-      const canReceive = widgetApi.hasCapability(
-        WidgetEventCapability.forRoomEvent(EventDirection.Receive, eventType).raw,
-      );
-      if (!canSend || !canReceive) {
+      if (!client.hasCapabilities(required)) {
         setPermissionDenied(true);
         setError(permissionError);
         return;
@@ -99,7 +101,9 @@ export function useRoomEventChannel<TEvent extends RoomEvent, TAction extends ob
       void refresh();
       pollTimer = window.setInterval(() => void refresh(), 2000);
     });
-    widgetApi.start();
+    void client.initialize().catch((cause: unknown) => {
+      if (alive) setError(String(cause));
+    });
     const notifyLoaded = () => void widgetApi.sendContentLoaded().catch(() => undefined);
     notifyLoaded();
     contentLoadedRetry = window.setInterval(notifyLoaded, 3000);

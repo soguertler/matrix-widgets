@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Room, RoomEvent, type RemoteParticipant } from 'livekit-client';
-import type { WidgetApi } from 'matrix-widget-api';
+import type { WidgetApi } from '@matrix-widget-toolkit/api';
 import { widgetUrlParam } from '@widget-games/widget-shared';
 import { isStroke, type Stroke } from '../model/game';
 
@@ -100,7 +100,7 @@ export function useLiveRoom(
       setState('connecting');
       try {
         const transports = await api!.getRtcTransports();
-        const livekit = transports.rtc_transports.find((item) => item.type === 'livekit');
+        const livekit = transports.find((item) => item.type === 'livekit');
         const service = livekit?.livekit_service_url;
         if (typeof service !== 'string')
           throw new Error('The Matrix client did not provide a LiveKit service.');

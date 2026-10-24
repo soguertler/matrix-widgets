@@ -1,4 +1,4 @@
-import type { IRoomEvent } from 'matrix-widget-api';
+import type { RoomEvent } from '@widget-games/widget-shared';
 
 export const GAME_EVENT = 'com.local.matrix_widget_lab.doodle_phone';
 export const MAX_GAME_EVENT_BYTES = 60_000;
@@ -54,7 +54,7 @@ type Action =
   | { version: 2; kind: 'expire'; gameId: string; round: number };
 
 export type GameAction = Action;
-export type GameEvent = Pick<IRoomEvent, 'sender' | 'event_id' | 'origin_server_ts' | 'content'>;
+export type GameEvent = RoomEvent;
 export type SubmittedEntry = { author: string; round: number; entry: Entry };
 export type Game = {
   id: string;

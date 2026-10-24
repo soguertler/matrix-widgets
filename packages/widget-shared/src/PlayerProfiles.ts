@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { WidgetApi } from 'matrix-widget-api';
+import type { WidgetApi } from '@matrix-widget-toolkit/api';
 
 export type MemberProfile = { name: string; avatar?: string };
 
@@ -21,7 +21,7 @@ export function useRoomMemberProfiles(
     let alive = true;
     async function refresh() {
       try {
-        const roomMembers = await api!.readStateEvents('m.room.member');
+        const roomMembers = await api!.receiveStateEvents<Record<string, unknown>>('m.room.member');
         if (!alive) return;
         const profiles: Record<string, MemberProfile> = {};
         for (const member of [...roomMembers].sort(
