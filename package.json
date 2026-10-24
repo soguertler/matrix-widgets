@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @widget-games/doodle-phone dev",
     "dev:sketch": "pnpm --filter @widget-games/sketch-guess dev",
-    "build": "pnpm --filter @widget-games/widget-shared typecheck && pnpm --filter @widget-games/doodle-phone build && pnpm --filter @widget-games/sketch-guess build",
+    "build": "pnpm --filter @widget-games/widget-shared typecheck && pnpm --filter @widget-games/doodle-phone build && pnpm --filter @widget-games/sketch-guess build && pnpm --filter @widget-games/linux build",
     "test": "pnpm --filter @widget-games/doodle-phone test && pnpm --filter @widget-games/sketch-guess test",
     "lint": "oxlint packages",
     "fmt": "oxfmt packages package.json pnpm-workspace.yaml README.md",

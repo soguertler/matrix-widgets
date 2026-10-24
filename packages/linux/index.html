@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget Linux</title>
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Widget Linux</h1>
+        </div>
+        <div class="actions">
+          <span id="status" role="status"></span>
+          <button id="power" type="button" aria-label="Boot Linux" title="Boot Linux">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 2v10" />
+              <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+            </svg>
+          </button>
+        </div>
+      </header>
+      <section class="terminal-card" aria-label="Linux terminal">
+        <div class="terminal-top"><span>ttyS0</span><span>v86 · 32-bit x86</span></div>
+        <div id="terminal" aria-label="Interactive Linux terminal"></div>
+      </section>
+      <div class="tool-row" aria-label="Terminal controls">
+        <button id="ctrl-c" type="button" disabled>Ctrl+C</button>
+        <button id="ctrl-d" type="button" disabled>Ctrl+D</button>
+        <button id="ctrl-l" type="button" disabled>Ctrl+L</button>
+        <label class="file-button" for="upload">Upload to /mnt</label>
+        <input id="upload" type="file" disabled />
+        <form id="download-form" autocomplete="off">
+          <label for="download-path">Download from /mnt</label>
+          <input
+            id="download-path"
+            type="text"
+            placeholder="filename"
+            aria-label="File in /mnt"
+            disabled
+          />
+          <button type="submit" disabled>Download</button>
+        </form>
+      </div>
+      <p id="file-status" role="status" class="file-status"></p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

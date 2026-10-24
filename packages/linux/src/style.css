@@ -1,0 +1,146 @@
+:root {
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: #09111c;
+  color: #e6edf5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 280px;
+}
+main {
+  max-width: 1100px;
+  margin: auto;
+  padding: clamp(16px, 3vw, 36px);
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+h1 {
+  font-size: clamp(28px, 5vw, 46px);
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#status {
+  color: #9ce8c1;
+  font-size: 13px;
+  margin-right: 6px;
+}
+button {
+  background: #58dda0;
+  border: 0;
+  border-radius: 9px;
+  color: #06130e;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+button:hover {
+  background: #8cf0bc;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+#power {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: transparent;
+  color: #61d6a3;
+}
+#power:hover {
+  background: #1b3740;
+}
+.terminal-card {
+  background: #050a0e;
+  border: 1px solid #294156;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px #0005;
+  overflow: hidden;
+}
+.terminal-top {
+  background: #142230;
+  border-bottom: 1px solid #294156;
+  color: #a9b7c8;
+  display: flex;
+  justify-content: space-between;
+  font:
+    12px ui-monospace,
+    monospace;
+  padding: 10px 16px;
+}
+#terminal {
+  height: max(500px, min(75vh, 640px));
+  padding: 12px;
+}
+.tool-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.tool-row button,
+.file-button {
+  background: #22354a;
+  color: #e6edf5;
+  font-size: 13px;
+  padding: 8px 11px;
+}
+.file-button {
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.tool-row button:hover,
+.file-button:hover {
+  background: #34506b;
+}
+#upload {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.file-button:has(+ #upload:disabled) {
+  opacity: 0.5;
+}
+#download-form {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+#download-form input {
+  width: 130px;
+  background: #0c1b28;
+  border: 1px solid #38536b;
+  border-radius: 7px;
+  color: #e6edf5;
+  font: inherit;
+  padding: 7px;
+}
+.file-status {
+  min-height: 1.3em;
+  color: #9ce8c1;
+  font-size: 13px;
+}

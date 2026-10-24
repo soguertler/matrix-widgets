@@ -1,0 +1,26 @@
+{
+  "name": "@widget-games/linux",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/prepare-assets.mjs",
+    "predev": "pnpm assets",
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "prebuild": "pnpm assets",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "matrix-widget-api": "catalog:",
+    "v86": "0.5.472"
+  },
+  "devDependencies": {
+    "@widget-games/tsconfig": "workspace:^",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-singlefile": "catalog:"
+  }
+}

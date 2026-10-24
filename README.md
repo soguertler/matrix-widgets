@@ -2,11 +2,15 @@
 
 pnpm workspace for Matrix room game widgets. Doodle Phone is a turn-based drawing
 telephone game. Sketch & Guess is a live drawing and guessing game using LiveKit.
+pnpm workspace for Matrix room widgets. Doodle Phone is a React, TypeScript,
+and Tailwind CSS telephone drawing game. Linux Terminal runs a small Linux
+system locally in the browser using v86.
 
 ## Packages
 
 - `packages/doodle-phone`: widget app, game rules, drawing tools, and UI.
 - `packages/sketch-guess`: live drawing widget, scoring rules, and LiveKit data channel.
+- `packages/linux`: browser Linux terminal backed by v86 and Buildroot.
 - `packages/widget-shared`: Matrix Widget API room-event connection, room member
   profiles, and widget URL parameters for future games.
 - `packages/tsconfig`: shared TypeScript config based on the `sbomtrak` workspace's
@@ -47,6 +51,34 @@ to three timed hints, and can add custom words before starting. Every player
 draws once per round; the drawer picks one of three words, can undo strokes,
 and guessers score based on the remaining time. Reveals advance automatically
 after five seconds.
+Run `pnpm --filter @widget-games/linux dev` to serve the Linux widget at
+`http://127.0.0.1:5174`. It has no Matrix permissions or shared state; each
+participant gets a separate Linux instance in their own browser tab. Click
+**Boot Linux** to download and start the emulator, then enter shell commands
+in the xterm.js terminal. The widget sets the guest hostname to
+`widget-linux`, requests a DHCP lease, and offers upload/download controls for
+files in `/mnt`. The Ctrl+C, Ctrl+D, and Ctrl+L buttons send those keys to the
+guest terminal. The boot sequence clears its setup output and runs the included
+static 32-bit `widgetfetch` system info command, also available as `fetch`. Its source is in
+`packages/linux/guest/widgetfetch.c`; rebuild it on Linux with 32-bit libc
+development files using `sh packages/linux/scripts/build-widgetfetch.sh`. The guest
+also includes the static 32-bit minimal Unix build of MicroPython 1.29.0.
+Run `micropython` or its `python` alias for the REPL, or use
+`python -c 'print(6 * 7)'` for a command. Press Ctrl+D to exit the REPL;
+the minimal MicroPython build does not provide `exit()`.
+The build recipe is `packages/linux/scripts/build-micropython.sh`, and its
+upstream license is included with the binary. The widget also includes
+[`terminal-snake`](https://github.com/tbpaolini/terminal-snake) as `snake` and
+[`btop`](https://github.com/aristocratos/btop) as `btop`. Both are static 32-bit
+binaries, with their upstream licenses included. Rebuild them with
+`sh packages/linux/scripts/build-snake.sh` and
+`sh packages/linux/scripts/build-btop.sh`. Snake uses arrow keys; press Ctrl+C
+to leave it. Press Q to leave btop. The single power button starts or restarts the
+guest. Networking uses v86's browser `fetch` backend, so HTTP access
+depends on browser CORS rules; it is not unrestricted network access. Restart
+discards the instance's files. The
+host must permit WebAssembly and serve the `.wasm` and `.bin` files from the
+same directory as the HTML.
 
 ## Use a release
 
@@ -57,6 +89,14 @@ GitHub release URL downloads the file; it is not a widget hosting URL.
 Sketch & Guess has a separate
 [`sketch-guess.html` asset](https://github.com/soguertler/widget-games/releases/latest/download/sketch-guess.html)
 to host in the same way.
+
+The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
+`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `widgetfetch`, `micropython`,
+`micropython-LICENSE.txt`, `snake`, `snake-LICENSE.txt`, `btop`, and
+`btop-LICENSE.txt`. Host these files together
+on an HTTPS origin that allows iframe embedding. The Linux widget does not
+need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix
+widget URL so it can complete the client's loading handshake.
 
 ## Protocol
 
@@ -100,3 +140,11 @@ pnpm build
 `pnpm build` writes standalone `index.html` files in both game packages' `dist`
 directories, with inlined CSS and JavaScript. Run `pnpm fmt` to format the
 workspace. Pushes to `main` publish both HTML files in a GitHub Release.
+`pnpm build` writes a standalone `packages/doodle-phone/dist/index.html` with
+inlined CSS and JavaScript. It also writes `packages/linux/dist/index.html`
+with inlined CSS and JavaScript plus four binary assets. The Linux build
+downloads the [v86 Buildroot image](https://github.com/copy/v86) and BIOS
+files from the project's hosts and verifies their SHA-256 hashes. It copies
+the pinned v86 npm package's WebAssembly file and verifies its hash too. Run
+`pnpm fmt` to format the workspace. Pushes to `main` publish both widgets and
+the Linux assets in a GitHub Release.
