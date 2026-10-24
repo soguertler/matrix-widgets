@@ -1,150 +1,143 @@
-# Widget Games
+# Matrix Widgets
 
-pnpm workspace for Matrix room game widgets. Doodle Phone is a turn-based drawing
-telephone game. Sketch & Guess is a live drawing and guessing game using LiveKit.
-pnpm workspace for Matrix room widgets. Doodle Phone is a React, TypeScript,
-and Tailwind CSS telephone drawing game. Linux Terminal runs a small Linux
-system locally in the browser using v86.
+A pnpm monorepo of independent Matrix room widgets: two multiplayer drawing games
+and a browser-based Linux terminal. Each app has its own build and development
+server, backed by shared Matrix integration and TypeScript configuration.
 
-## Packages
+## Workspace
 
-- `packages/doodle-phone`: widget app, game rules, drawing tools, and UI.
-- `packages/sketch-guess`: live drawing widget, scoring rules, and LiveKit data channel.
-- `packages/linux`: browser Linux terminal backed by v86 and Buildroot.
-- `packages/widget-shared`: Matrix Widget API room-event connection, room member
-  profiles, and widget URL parameters for future games.
-- `packages/tsconfig`: shared TypeScript config based on the `sbomtrak` workspace's
-  Vite React and strictest presets. Doodle Phone keeps two indexed-access
-  overrides while its existing drawing code is migrated.
+| Package                  | Purpose                                                               | Development port |
+| ------------------------ | --------------------------------------------------------------------- | ---------------- |
+| `packages/doodle-phone`  | Turn-based drawing telephone game                                     | 5173             |
+| `packages/sketch-guess`  | Live drawing and guessing over LiveKit                                | 5174             |
+| `packages/linux`         | Linux virtual machine with a React/xterm terminal                     | 5175             |
+| `packages/widget-shared` | Nordeck toolkit clients, room events, member profiles, URL parameters | —                |
+| `packages/tsconfig`      | Shared strict TypeScript configuration                                | —                |
 
-Dependencies use the pnpm workspace catalog. Each game owns its own event type,
-protocol, and build output; shared code does not interpret game actions.
+Internal package names retain the `@widget-games/` scope. Dependencies are managed
+through the catalog in `pnpm-workspace.yaml`; internal dependencies use `workspace:`.
+Matrix clients use [Nordeck's Matrix Widget Toolkit](https://github.com/nordeck/matrix-widget-toolkit).
+The shared integration uses the toolkit's underlying `matrix-widget-api` transport
+for the loading handshake, capability constants, and bounded history queries that
+are not exposed by the toolkit's room-event convenience method.
 
 ## Development
 
+Use Node.js 22.6 or newer and pnpm 9.14.4 (the version pinned in `package.json`).
+
 ```sh
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm dev                 # all three apps, on separate ports
+pnpm dev:doodle          # Doodle Phone only
+pnpm dev:sketch          # Sketch & Guess only
+pnpm dev:linux           # Linux only
 ```
 
-`pnpm dev` serves Doodle Phone at `http://127.0.0.1:5173`. Add it to a Matrix
-client with Widget API support using a URL with these parameters:
+Linux's first development/build run downloads checksum-verified kernel and BIOS
+assets and copies v86's WebAssembly runtime into `packages/linux/public`. It needs
+network access for missing assets. Subsequent runs reuse verified files.
+
+| Command                                                    | What it does                                       |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `pnpm build`                                               | Typecheck the workspace and build every app        |
+| `pnpm typecheck`                                           | Check all app and shared-package types             |
+| `pnpm test`                                                | Run all package tests                              |
+| `pnpm lint`                                                | Lint workspace source and scripts                  |
+| `pnpm fmt` / `pnpm fmt:check`                              | Format / check source, config, workflows, and docs |
+| `pnpm check`                                               | Formatting, lint, tests, typechecking, and builds  |
+| `pnpm preview`                                             | Serve all production builds on ports 4173–4175     |
+| `pnpm preview:doodle` / `preview:sketch` / `preview:linux` | Preview one app                                    |
+| `pnpm assets:linux`                                        | Prepare and verify Linux runtime assets            |
+| `pnpm guest:build`                                         | Rebuild the custom Linux guest commands            |
+| `pnpm release:prepare`                                     | Build and collect deployable files in `release/`   |
+| `pnpm clean`                                               | Remove app builds and staged releases              |
+
+Run a package command directly with `pnpm --filter @widget-games/<package> <command>`.
+To add an app, create a package under `packages/`, use the shared TypeScript config,
+assign unique dev/preview ports, and provide `dev`, `build`, `typecheck`, and `preview`
+scripts. Recursive workspace commands discover it automatically; add its deployable
+output to `scripts/prepare-release.mjs` when it should ship in releases.
+
+## Matrix setup
+
+Serve builds over HTTPS from a host that permits embedding by your Matrix client.
+Add the app URL as a room widget, with these substituted parameters:
 
 ```text
-https://your-widget-host.example/?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id
+https://your-widget-host.example/doodle-phone.html?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id
 ```
 
-The client must grant permission to send and receive
-`com.local.matrix_widget_lab.doodle_phone` room events, receive `m.room.member`
-state events, and download profile images. All players use the same room and
-widget. The host starts with 2–14 players, chooses 2–N turns per story, and
-sets a one-, two-, or three-minute timer. Rounds advance when everyone submits;
-missing turns are marked as timed out. Players can export each story as a PNG.
-Unsubmitted turns are saved in the browser tab's session storage.
+Use `sketch-guess.html` or `linux.html` for the other widgets. Sketch & Guess also
+needs `&deviceId=$matrix_device_id`. Parameters may be supplied in the query string
+or fragment. Games require the host to grant room-event send/receive permissions,
+room-member state access, and profile-image downloads.
 
-`pnpm dev:sketch` serves Sketch & Guess at `http://127.0.0.1:5174`. Its widget URL
-also needs `&deviceId=$matrix_device_id`. The client must support the
-`org.matrix.msc4515.rtc_transports` widget capability, OpenID token requests,
-and provide a LiveKit transport. All players open the same widget in one Matrix
-room. The host creates a lobby, selects an English or German word list, sets up
-to three timed hints, and can add custom words before starting. Every player
-draws once per round; the drawer picks one of three words, can undo strokes,
-and guessers score based on the remaining time. Reveals advance automatically
-after five seconds.
-Run `pnpm --filter @widget-games/linux dev` to serve the Linux widget at
-`http://127.0.0.1:5174`. It has no Matrix permissions or shared state; each
-participant gets a separate Linux instance in their own browser tab. Click
-**Boot Linux** to download and start the emulator, then enter shell commands
-in the xterm.js terminal. The widget sets the guest hostname to
-`widget-linux`, requests a DHCP lease, and offers upload/download controls for
-files in `/mnt`. The Ctrl+C, Ctrl+D, and Ctrl+L buttons send those keys to the
-guest terminal. The boot sequence clears its setup output and runs the included
-static 32-bit `widgetfetch` system info command, also available as `fetch`. Its source is in
-`packages/linux/guest/widgetfetch.c`; rebuild it on Linux with 32-bit libc
-development files using `sh packages/linux/scripts/build-widgetfetch.sh`. The guest
-also includes the static 32-bit minimal Unix build of MicroPython 1.29.0.
-Run `micropython` or its `python` alias for the REPL, or use
-`python -c 'print(6 * 7)'` for a command. Press Ctrl+D to exit the REPL;
-the minimal MicroPython build does not provide `exit()`.
-The build recipe is `packages/linux/scripts/build-micropython.sh`, and its
-upstream license is included with the binary. The widget also includes
-[`terminal-snake`](https://github.com/tbpaolini/terminal-snake) as `snake` and
-[`btop`](https://github.com/aristocratos/btop) as `btop`. Both are static 32-bit
-binaries, with their upstream licenses included. Rebuild them with
-`sh packages/linux/scripts/build-snake.sh` and
-`sh packages/linux/scripts/build-btop.sh`. Snake uses arrow keys; press Ctrl+C
-to leave it. Press Q to leave btop. The single power button starts or restarts the
-guest. Networking uses v86's browser `fetch` backend, so HTTP access
-depends on browser CORS rules; it is not unrestricted network access. Restart
-discards the instance's files. The
-host must permit WebAssembly and serve the `.wasm` and `.bin` files from the
-same directory as the HTML.
+### Doodle Phone
 
-## Use a release
+The host starts with 2–14 players, chooses 2–N turns per story, and sets a one-, two-,
+or three-minute timer. Players alternate writing and drawing; missing submissions
+time out. Stories can be exported as PNGs, and unfinished turns are saved in the
+tab's session storage.
 
-Download the [latest `doodle-phone.html` release asset](https://github.com/soguertler/widget-games/releases/latest/download/doodle-phone.html)
-and serve it from an HTTPS host that allows embedding in your Matrix client.
-Add the hosted URL as a room widget, including the parameters shown above. The
-GitHub release URL downloads the file; it is not a widget hosting URL.
-Sketch & Guess has a separate
-[`sketch-guess.html` asset](https://github.com/soguertler/widget-games/releases/latest/download/sketch-guess.html)
-to host in the same way.
+Actions use `com.local.matrix_widget_lab.doodle_phone` room events with `version: 2`,
+a `gameId`, and a `kind` of `create`, `join`, `leave`, `cancel`, `start`, `submit`, or
+`expire`. The reducer lives in `packages/doodle-phone/src/model/game.ts`. Drawings
+contain vector strokes and PNG fill masks. Room members can read prompts and
+submissions in history even if the client hides these events from its timeline.
 
-The release also includes `linux.html`, `v86.wasm`, `seabios.bin`,
-`vgabios.bin`, `buildroot-bzimage68.bin`, `icon.svg`, `widgetfetch`, `micropython`,
-`micropython-LICENSE.txt`, `snake`, `snake-LICENSE.txt`, `btop`, and
-`btop-LICENSE.txt`. Host these files together
-on an HTTPS origin that allows iframe embedding. The Linux widget does not
-need room-event permission. Include `?widgetId=$matrix_widget_id` in its Matrix
-widget URL so it can complete the client's loading handshake.
+### Sketch & Guess
 
-## Protocol
+The Matrix client must provide LiveKit transport discovery through
+`org.matrix.msc4515.rtc_transports` and grant OpenID token requests. Players share
+one widget in one room. The host chooses English or German words, optional custom
+words, and up to three timed hints. Each player draws once per round, picking one
+of three words. Guessers score according to remaining time.
 
-Doodle Phone actions are non-state Matrix room events of type
-`com.local.matrix_widget_lab.doodle_phone`. Their content has `version: 2`, a
-`gameId`, and a `kind` of `create`, `join`, `leave`, `cancel`, `start`, `submit`, or
-`expire`. `packages/doodle-phone/src/model/game.ts` validates and reduces these
-events into game state. Room members can read prompts and drawings, even when
-the client hides the custom events from its timeline.
+`com.widget_games.sketch_guess` room events store lobbies, settings, rounds, hints,
+scores, and reveals. LiveKit carries private guesses, live strokes, undo actions,
+and drawing replay for reconnecting players. Full words are withheld from room
+events until reveal. Reveals advance after five seconds; stalled rounds and lobbies
+have recovery timers.
 
-The widget reads recent game events from the host every two seconds. It requests
-more history when the first 1,000 events exclude the current game's creation,
-up to 4,000 events. If the client cannot provide enough history, it shows an
-error. A connected player's widget sends an expiry event when the round timer
-reaches zero. Drawing turns store vector strokes and PNG masks for area fills.
+Both games poll history every two seconds and request up to 4,000 events to find
+the current game's creation. They report incomplete history instead of silently
+building an invalid game state.
 
-Sketch & Guess uses `com.widget_games.sketch_guess` room events for lobbies,
-settings, round starts, timed letter hints, scores, and reveals. The full secret
-word and guesses are absent from room events during drawing; hints intentionally
-reveal individual letters. LiveKit data packets carry private guesses, live
-stroke previews, completed strokes, and undo actions;
-disconnected players can resume the current drawing through a stroke replay from
-the drawer. The reveal event stores the word and a compacted drawing in Matrix
-room history. Any joined player can expire a round five seconds after its timer
-ends if the drawer did not reveal it.
-An unchosen word is skipped after 30 seconds. A joined player can cancel a
-lobby after two minutes if its host does not return.
-The widget polls room events every two seconds and loads up to 4,000 events to
-find the latest game's creation. It reports an error if the client cannot
-provide enough history.
+### Linux
 
-## Build and checks
+A local, ephemeral 32-bit x86 virtual machine runs through v86 with 64 MiB RAM.
+The React terminal fills the widget. Its top bar contains status, upload, download,
+and power controls. Power boots or restarts Linux; restarting or closing the widget
+clears the VM and its files. Normal terminal keyboard input works directly.
 
-```sh
-pnpm test
-pnpm lint
-pnpm fmt:check
-pnpm build
-```
+Included commands:
 
-`pnpm build` writes standalone `index.html` files in both game packages' `dist`
-directories, with inlined CSS and JavaScript. Run `pnpm fmt` to format the
-workspace. Pushes to `main` publish both HTML files in a GitHub Release.
-`pnpm build` writes a standalone `packages/doodle-phone/dist/index.html` with
-inlined CSS and JavaScript. It also writes `packages/linux/dist/index.html`
-with inlined CSS and JavaScript plus four binary assets. The Linux build
-downloads the [v86 Buildroot image](https://github.com/copy/v86) and BIOS
-files from the project's hosts and verifies their SHA-256 hashes. It copies
-the pinned v86 npm package's WebAssembly file and verifies its hash too. Run
-`pnpm fmt` to format the workspace. Pushes to `main` publish both widgets and
-the Linux assets in a GitHub Release.
+- `top`: a small custom process monitor showing CPU, memory, load, and processes
+  ordered by resident memory; press `q` to leave.
+- `snake`: a small custom Snake game; use arrow keys or WASD and `q` to leave.
+- `widgetfetch` (also `fetch`): guest system information.
+- `micropython` (also `python`): a compact Python interpreter.
+
+`top` and `snake` each have one self-contained C source file in `packages/linux/guest`.
+Their checked-in static x86 binaries can be rebuilt with `pnpm guest:build` on Linux
+with GCC and 32-bit static libc development support (for example `gcc-multilib` and
+`libc6-dev-i386` on Debian/Ubuntu). MicroPython has a separate pinned build script and
+license in the Linux package.
+
+Uploads appear at `/mnt/<filename>`. Download opens a dialog accepting a path such
+as `/mnt/report.txt` or `/mnt/project/result.txt`. v86 exposes only the shared `/mnt`
+filesystem to the browser; copy files there from other guest directories first.
+Guest networking uses v86's fetch relay and is subject to browser/CORS restrictions.
+The terminal also runs outside Matrix without requiring a widget connection.
+
+## Builds and releases
+
+Each app writes `dist/index.html` with inlined application CSS and JavaScript.
+The two games are standalone HTML files. Linux additionally needs the kernel, BIOS,
+WebAssembly runtime, icon, guest commands, and accompanying license alongside its
+HTML. Do not deploy `linux.html` on its own.
+
+`pnpm release:prepare` collects all three named HTML files and Linux companion files
+in `release/`. Host that directory, or download the same assets from GitHub Releases.
+Release download links are not embeddable hosting URLs. Pushes to `main` run all
+checks and publish the complete asset set using `.github/workflows/release-widget.yml`.

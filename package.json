@@ -1,19 +1,34 @@
 {
-  "name": "widget-games",
+  "name": "matrix-widgets",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @widget-games/doodle-phone dev",
+    "dev": "pnpm -r --parallel --if-present dev",
+    "dev:doodle": "pnpm --filter @widget-games/doodle-phone dev",
     "dev:sketch": "pnpm --filter @widget-games/sketch-guess dev",
-    "build": "pnpm --filter @widget-games/widget-shared typecheck && pnpm --filter @widget-games/doodle-phone build && pnpm --filter @widget-games/sketch-guess build && pnpm --filter @widget-games/linux build",
-    "test": "pnpm --filter @widget-games/doodle-phone test && pnpm --filter @widget-games/sketch-guess test",
-    "lint": "oxlint packages",
-    "fmt": "oxfmt packages package.json pnpm-workspace.yaml README.md",
-    "fmt:check": "oxfmt --check packages package.json pnpm-workspace.yaml README.md"
+    "dev:linux": "pnpm --filter @widget-games/linux dev",
+    "build": "pnpm typecheck && pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "preview": "pnpm -r --parallel --if-present preview",
+    "preview:doodle": "pnpm --filter @widget-games/doodle-phone preview",
+    "preview:sketch": "pnpm --filter @widget-games/sketch-guess preview",
+    "preview:linux": "pnpm --filter @widget-games/linux preview",
+    "lint": "oxlint packages scripts",
+    "fmt": "oxfmt packages scripts package.json pnpm-workspace.yaml README.md .github",
+    "fmt:check": "oxfmt --check packages scripts package.json pnpm-workspace.yaml README.md .github",
+    "check": "pnpm fmt:check && pnpm lint && pnpm test && pnpm build",
+    "assets:linux": "pnpm --filter @widget-games/linux assets",
+    "guest:build": "pnpm --filter @widget-games/linux guest:build",
+    "release:prepare": "pnpm build && node scripts/prepare-release.mjs",
+    "clean": "node scripts/clean.mjs"
   },
   "devDependencies": {
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0"
+  },
+  "engines": {
+    "node": ">=22.6.0"
   },
   "packageManager": "pnpm@9.14.4"
 }
