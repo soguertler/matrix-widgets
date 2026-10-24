@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Maximize2 } from 'lucide-react';
-import { MatrixCapabilities } from '@widget-games/widget-shared';
+import { MatrixCapabilities } from '@matrix-widgets/widget-shared';
 import {
   displayName,
   useRoomEventChannel,
   useRoomMemberProfiles,
   widgetUrlParam,
   type RoomEvent,
-} from '@widget-games/widget-shared';
+} from '@matrix-widgets/widget-shared';
 import StartScreen from './components/StartScreen';
 import Lobby from './components/Lobby';
 import Choosing from './components/Choosing';

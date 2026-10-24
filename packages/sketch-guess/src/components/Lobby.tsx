@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Play, Users } from 'lucide-react';
-import { displayName, type MemberProfile } from '@widget-games/widget-shared';
+import { displayName, type MemberProfile } from '@matrix-widgets/widget-shared';
 import type { Game } from '../model/game';
 import type { Language } from '../model/words';
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { submissionKey, type Game, type GameAction } from '../model/game';
-import { displayName } from '@widget-games/widget-shared';
+import { displayName } from '@matrix-widgets/widget-shared';
 import { exportStory } from '../reveal/export';
 import RoundEntry from './RoundEntry';
 

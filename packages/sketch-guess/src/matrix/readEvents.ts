@@ -1,4 +1,4 @@
-import type { RoomEvent } from '@widget-games/widget-shared';
+import type { RoomEvent } from '@matrix-widgets/widget-shared';
 
 export async function readCurrentGameEvents(
   read: (limit: number) => Promise<RoomEvent[]>,

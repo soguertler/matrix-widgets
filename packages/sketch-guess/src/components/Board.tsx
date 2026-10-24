@@ -1,6 +1,6 @@
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { Pencil, Send, Timer } from 'lucide-react';
-import { displayName, type MemberProfile } from '@widget-games/widget-shared';
+import { displayName, type MemberProfile } from '@matrix-widgets/widget-shared';
 import type { Game, Stroke } from '../model/game';
 import Canvas from './Canvas';
 

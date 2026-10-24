@@ -8,7 +8,7 @@ import {
   type Game,
   type GameAction,
 } from '../model/game';
-import { displayName, type MemberProfile } from '@widget-games/widget-shared';
+import { displayName, type MemberProfile } from '@matrix-widgets/widget-shared';
 
 type Props = {
   game: Game;

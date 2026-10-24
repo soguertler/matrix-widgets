@@ -1,4 +1,4 @@
-import { displayName, type MemberProfile } from '@widget-games/widget-shared';
+import { displayName, type MemberProfile } from '@matrix-widgets/widget-shared';
 import type { Game } from '../model/game';
 
 export default function StartScreen({

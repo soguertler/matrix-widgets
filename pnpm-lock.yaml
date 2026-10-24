@@ -68,7 +68,7 @@ importers:
 
   packages/doodle-phone:
     dependencies:
-      '@widget-games/widget-shared':
+      '@matrix-widgets/widget-shared':
         specifier: workspace:^
         version: link:../widget-shared
       lucide-react:
@@ -93,7 +93,7 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@widget-games/tsconfig':
+      '@matrix-widgets/tsconfig':
         specifier: workspace:^
         version: link:../tsconfig
       tailwindcss:
@@ -111,7 +111,7 @@ importers:
 
   packages/linux:
     dependencies:
-      '@widget-games/widget-shared':
+      '@matrix-widgets/widget-shared':
         specifier: workspace:^
         version: link:../widget-shared
       '@xterm/addon-fit':
@@ -142,7 +142,7 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@widget-games/tsconfig':
+      '@matrix-widgets/tsconfig':
         specifier: workspace:^
         version: link:../tsconfig
       typescript:
@@ -160,7 +160,7 @@ importers:
       '@matrix-widget-toolkit/api':
         specifier: 'catalog:'
         version: 5.1.1
-      '@widget-games/widget-shared':
+      '@matrix-widgets/widget-shared':
         specifier: workspace:^
         version: link:../widget-shared
       livekit-client:
@@ -188,7 +188,7 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 4.7.0(vite@6.4.5(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@widget-games/tsconfig':
+      '@matrix-widgets/tsconfig':
         specifier: workspace:^
         version: link:../tsconfig
       tailwindcss:
@@ -228,7 +228,7 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.3.0
-      '@widget-games/tsconfig':
+      '@matrix-widgets/tsconfig':
         specifier: workspace:^
         version: link:../tsconfig
       typescript:

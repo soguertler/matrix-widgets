@@ -1,4 +1,4 @@
-import { useRoomEventChannel } from '@widget-games/widget-shared';
+import { useRoomEventChannel } from '@matrix-widgets/widget-shared';
 import {
   GAME_EVENT,
   gameEventBytes,

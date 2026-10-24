@@ -1,5 +1,5 @@
 {
-  "extends": "@widget-games/tsconfig/base",
+  "extends": "@matrix-widgets/tsconfig/base",
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true

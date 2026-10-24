@@ -1,7 +1,7 @@
-import type { RoomEvent } from '@widget-games/widget-shared';
+import type { RoomEvent } from '@matrix-widgets/widget-shared';
 import type { Language } from './words';
 
-export const EVENT_TYPE = 'com.widget_games.sketch_guess';
+export const EVENT_TYPE = 'com.matrix_widgets.sketch_guess';
 export type Point = { x: number; y: number };
 export type Stroke = { id: string; color: string; width: number; points: Point[] };
 export function isStroke(value: unknown): value is Stroke {

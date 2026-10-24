@@ -1,4 +1,4 @@
-import type { RoomEvent } from '@widget-games/widget-shared';
+import type { RoomEvent } from '@matrix-widgets/widget-shared';
 
 export const GAME_EVENT = 'com.local.matrix_widget_lab.doodle_phone';
 export const MAX_GAME_EVENT_BYTES = 60_000;

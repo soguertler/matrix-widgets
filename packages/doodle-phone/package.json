@@ -1,5 +1,5 @@
 {
-  "name": "@widget-games/doodle-phone",
+  "name": "@matrix-widgets/doodle-phone",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,17 +11,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@widget-games/widget-shared": "workspace:^",
+    "@matrix-widgets/widget-shared": "workspace:^",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@matrix-widgets/tsconfig": "workspace:^",
     "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "@widget-games/tsconfig": "workspace:^",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

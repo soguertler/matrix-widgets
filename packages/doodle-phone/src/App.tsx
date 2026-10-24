@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { displayName, useRoomMemberProfiles, widgetUrlParam } from '@widget-games/widget-shared';
+import { displayName, useRoomMemberProfiles, widgetUrlParam } from '@matrix-widgets/widget-shared';
 import Lobby from './components/Lobby';
 import { useMatrixGame } from './matrix/useMatrixGame';
 import Playing from './components/Playing';

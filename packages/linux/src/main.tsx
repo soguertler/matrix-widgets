@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Download, Power, Upload } from 'lucide-react';
-import { createWidgetClient, widgetUrlParam } from '@widget-games/widget-shared';
+import { createWidgetClient, widgetUrlParam } from '@matrix-widgets/widget-shared';
 import { createTerminal } from './terminal';
 import '@xterm/xterm/css/xterm.css';
 import './style.css';

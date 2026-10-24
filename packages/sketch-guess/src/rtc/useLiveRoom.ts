@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Room, RoomEvent, type RemoteParticipant } from 'livekit-client';
 import type { WidgetApi } from '@matrix-widget-toolkit/api';
-import { widgetUrlParam } from '@widget-games/widget-shared';
-import { isStroke, type Stroke } from '../model/game';
+import { widgetUrlParam } from '@matrix-widgets/widget-shared';
+import { EVENT_TYPE, isStroke, type Stroke } from '../model/game';
 
 export type Packet =
   | { kind: 'presence'; player: string }
@@ -114,7 +114,7 @@ export function useLiveRoom(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             room_id: roomId,
-            slot_id: `com.widget_games.sketch_guess#${gameId}`,
+            slot_id: `${EVENT_TYPE}#${gameId}`,
             openid_token: openid,
             member: {
               id: memberId,

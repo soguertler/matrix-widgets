@@ -14,7 +14,7 @@ server, backed by shared Matrix integration and TypeScript configuration.
 | `packages/widget-shared` | Nordeck toolkit clients, room events, member profiles, URL parameters | —                |
 | `packages/tsconfig`      | Shared strict TypeScript configuration                                | —                |
 
-Internal package names retain the `@widget-games/` scope. Dependencies are managed
+Internal packages use the `@matrix-widgets/` scope. Dependencies are managed
 through the catalog in `pnpm-workspace.yaml`; internal dependencies use `workspace:`.
 Matrix clients use [Nordeck's Matrix Widget Toolkit](https://github.com/nordeck/matrix-widget-toolkit).
 The shared integration uses the toolkit's underlying `matrix-widget-api` transport
@@ -52,7 +52,7 @@ network access for missing assets. Subsequent runs reuse verified files.
 | `pnpm release:prepare`                                     | Build and collect deployable files in `release/`   |
 | `pnpm clean`                                               | Remove app builds and staged releases              |
 
-Run a package command directly with `pnpm --filter @widget-games/<package> <command>`.
+Run a package command directly with `pnpm --filter @matrix-widgets/<package> <command>`.
 To add an app, create a package under `packages/`, use the shared TypeScript config,
 assign unique dev/preview ports, and provide `dev`, `build`, `typecheck`, and `preview`
 scripts. Recursive workspace commands discover it automatically; add its deployable
@@ -93,8 +93,10 @@ one widget in one room. The host chooses English or German words, optional custo
 words, and up to three timed hints. Each player draws once per round, picking one
 of three words. Guessers score according to remaining time.
 
-`com.widget_games.sketch_guess` room events store lobbies, settings, rounds, hints,
-scores, and reveals. LiveKit carries private guesses, live strokes, undo actions,
+`com.matrix_widgets.sketch_guess` room events store lobbies, settings, rounds, hints,
+scores, and reveals. The renamed event namespace and LiveKit room identifiers require
+all players to use the updated widget and start a new lobby after upgrading.
+LiveKit carries private guesses, live strokes, undo actions,
 and drawing replay for reconnecting players. Full words are withheld from room
 events until reveal. Reveals advance after five seconds; stalled rounds and lobbies
 have recovery timers.
