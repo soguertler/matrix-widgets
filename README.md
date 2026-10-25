@@ -4,6 +4,24 @@ A pnpm monorepo of independent Matrix room widgets: two multiplayer drawing game
 and a browser-based Linux terminal. Each app has its own build and development
 server, backed by shared Matrix integration and TypeScript configuration.
 
+## Hosted widgets
+
+[Open the widget directory](https://soguertler.github.io/matrix-widgets/) to copy
+ready-to-use Matrix widget URLs, or open an app directly:
+
+- [Doodle Phone](https://soguertler.github.io/matrix-widgets/doodle-phone/index.html)
+- [Sketch & Guess](https://soguertler.github.io/matrix-widgets/sketch-guess/index.html)
+- [Linux Terminal](https://soguertler.github.io/matrix-widgets/linux/index.html)
+
+The games require Matrix widget URL parameters and room permissions. Sketch & Guess
+also requires the client's LiveKit transport. GitHub Pages hosts the frontend and
+Linux assets; Matrix and LiveKit are provided by your room's server and client.
+
+Pushes to `main` deploy the checked builds through `.github/workflows/pages.yml`.
+`pnpm pages:prepare` builds the same static site locally in `_site/`, including the
+landing page and complete widget folders. GitHub Pages uses the **GitHub Actions**
+publishing source in the repository settings. ZIP releases remain available.
+
 ## Workspace
 
 | Package                  | Purpose                                                               | Development port |

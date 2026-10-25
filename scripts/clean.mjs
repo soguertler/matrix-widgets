@@ -2,6 +2,7 @@ import { rm } from 'node:fs/promises';
 
 for (const directory of [
   'release',
+  '_site',
   'packages/doodle-phone/dist',
   'packages/sketch-guess/dist',
   'packages/linux/dist',

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matrix Widgets</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.6;
+      }
+      body {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.2rem;
+      }
+      article {
+        border: 1px solid #8886;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      a {
+        color: light-dark(#1459a6, #89baff);
+      }
+      textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 100px;
+        padding: 12px;
+        border: 1px solid #8888;
+        border-radius: 4px;
+        background: transparent;
+        color: inherit;
+        resize: vertical;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      footer {
+        margin-top: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Matrix Widgets</h1>
+      <p>Drawing games and a Linux terminal for your Matrix rooms.</p>
+      <p>
+        In Element, use <code>/addwidget</code> with a widget URL below, then approve its
+        permissions. Drawing games need a Matrix room; the Linux terminal also works on its own.
+      </p>
+      <article>
+        <h2><a href="./doodle-phone/index.html">Doodle Phone</a></h2>
+        <p>Write, draw, and guess as a story passes between players.</p>
+        <label for="doodle-url">Doodle Phone widget URL</label>
+        <textarea id="doodle-url" data-widget="doodle-phone" readonly spellcheck="false"></textarea>
+      </article>
+      <article>
+        <h2><a href="./sketch-guess/index.html">Sketch &amp; Guess</a></h2>
+        <p>
+          Draw live while the room guesses. Requires a Matrix client and homeserver with LiveKit
+          support.
+        </p>
+        <label for="sketch-url">Sketch &amp; Guess widget URL</label>
+        <textarea id="sketch-url" data-widget="sketch-guess" readonly spellcheck="false"></textarea>
+      </article>
+      <article>
+        <h2><a href="./linux/index.html">Linux Terminal</a></h2>
+        <p>
+          A Linux machine in your browser, with a terminal, file transfers, top, and Snake. Files
+          reset when the widget closes or restarts.
+        </p>
+        <label for="linux-url">Linux Terminal widget URL</label>
+        <textarea id="linux-url" data-widget="linux" readonly spellcheck="false"></textarea>
+      </article>
+    </main>
+    <footer>
+      <a href="https://github.com/soguertler/matrix-widgets">Source and documentation</a> ·
+      <a href="https://github.com/soguertler/matrix-widgets/releases/latest">Download the ZIP</a>
+    </footer>
+    <script>
+      for (const field of document.querySelectorAll('[data-widget]')) {
+        const url = new URL(`./${field.dataset.widget}/index.html`, document.baseURI);
+        field.value = `${url.href}?widgetId=$matrix_widget_id&userId=$matrix_user_id&roomId=$matrix_room_id${field.dataset.widget === 'sketch-guess' ? '&deviceId=$org.matrix.msc3819.matrix_device_id' : ''}`;
+        field.addEventListener('focus', () => field.select());
+      }
+    </script>
+  </body>
+</html>
