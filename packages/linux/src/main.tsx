@@ -9,10 +9,10 @@ import './style.css';
 const widgetId = widgetUrlParam('widgetId');
 if (window.parent !== window && widgetId) {
   const client = createWidgetClient(widgetId);
-  const loaded = () => void client.matrixWidgetApi.sendContentLoaded().catch(() => undefined);
-  const retry = window.setInterval(loaded, 3000);
-  void client.initialize().finally(() => window.clearInterval(retry));
-  loaded();
+  void client.initialize().catch(() => undefined);
+  window.addEventListener('pagehide', () => client.matrixWidgetApi.transport.stop(), {
+    once: true,
+  });
 }
 
 function App() {

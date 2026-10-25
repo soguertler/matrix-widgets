@@ -18,7 +18,7 @@ Internal packages use the `@matrix-widgets/` scope. Dependencies are managed
 through the catalog in `pnpm-workspace.yaml`; internal dependencies use `workspace:`.
 Matrix clients use [Nordeck's Matrix Widget Toolkit](https://github.com/nordeck/matrix-widget-toolkit).
 The shared integration uses the toolkit's underlying `matrix-widget-api` transport
-for the loading handshake, capability constants, and bounded history queries that
+for capability constants and bounded history queries that
 are not exposed by the toolkit's room-event convenience method.
 
 ## Development
@@ -68,7 +68,7 @@ https://your-widget-host.example/doodle-phone/index.html?widgetId=$matrix_widget
 ```
 
 Use `sketch-guess/index.html` or `linux/index.html` for the other widgets. Sketch & Guess also
-needs `&deviceId=$matrix_device_id`. Parameters may be supplied in the query string
+needs `&deviceId=$org.matrix.msc3819.matrix_device_id`. Parameters may be supplied in the query string
 or fragment. Games require the host to grant room-event send/receive permissions,
 room-member state access, and profile-image downloads.
 

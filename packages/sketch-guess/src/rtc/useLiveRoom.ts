@@ -108,7 +108,9 @@ export function useLiveRoom(
         if (!openid.access_token) throw new Error('OpenID permission was not granted.');
         const deviceId = widgetUrlParam('deviceId');
         if (!deviceId || deviceId.startsWith('$'))
-          throw new Error('The widget URL needs a deviceId=$matrix_device_id parameter.');
+          throw new Error(
+            'The widget URL needs a deviceId=$org.matrix.msc3819.matrix_device_id parameter.',
+          );
         const response = await fetch(`${service.replace(/\/$/, '')}/get_token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
