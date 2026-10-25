@@ -1,0 +1,49 @@
+server_name: matrix.localhost
+public_baseurl: http://localhost:8008/
+pid_file: /data/homeserver.pid
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    resources:
+      - names: [client, openid]
+        compress: false
+database:
+  name: sqlite3
+  args:
+    database: /data/homeserver.db
+media_store_path: /data/media_store
+signing_key_path: /data/matrix.localhost.signing.key
+registration_shared_secret: local-widget-test-registration-only
+enable_registration: false
+report_stats: false
+trusted_key_servers: []
+federation_domain_whitelist: []
+experimental_features:
+  msc4143_enabled: true
+  msc4222_enabled: true
+matrix_rtc:
+  transports:
+    - type: livekit
+      livekit_service_url: http://localhost:8082
+rc_message:
+  per_second: 100
+  burst_count: 1000
+rc_admin_redaction:
+  per_second: 100
+  burst_count: 1000
+rc_login:
+  address:
+    per_second: 100
+    burst_count: 1000
+  account:
+    per_second: 100
+    burst_count: 1000
+  failed_attempts:
+    per_second: 100
+    burst_count: 1000
+rc_joins:
+  local:
+    per_second: 100
+    burst_count: 1000

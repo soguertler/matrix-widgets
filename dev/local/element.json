@@ -1,0 +1,21 @@
+{
+  "default_server_config": {
+    "m.homeserver": {
+      "base_url": "http://localhost:8008",
+      "server_name": "matrix.localhost"
+    }
+  },
+  "brand": "Matrix Widgets Test",
+  "disable_guests": true,
+  "disable_3pid_login": true,
+  "disable_custom_urls": true,
+  "force_verification": false,
+  "default_federate": false,
+  "default_theme": "dark",
+  "integrations_ui_url": "",
+  "integrations_rest_url": "",
+  "integrations_widgets_urls": [],
+  "show_labs_settings": true,
+  "features": { "feature_release_announcement": false },
+  "setting_defaults": { "sendReadReceipts": false }
+}

@@ -58,6 +58,41 @@ assign unique dev/preview ports, and provide `dev`, `build`, `typecheck`, and `p
 scripts. Recursive workspace commands discover it automatically; add its deployable
 output to `scripts/prepare-release.mjs` when it should ship in releases.
 
+## Local Element and Matrix test environment
+
+```sh
+pnpm local:up       # build widgets, start Docker services, create test rooms/accounts
+pnpm local:status   # inspect services
+pnpm local:check    # check widgets, rooms, OpenID, and LiveKit token issuance
+pnpm local:logs     # follow service logs
+pnpm local:down     # stop services, preserving homeserver data
+```
+
+Requires Linux, Docker Compose, OpenSSL, and free local ports 7880, 7882 (UDP),
+8008, 8080, 8082, 8090, and 8448. The first start downloads container images. Open
+[local Element](http://localhost:8080) and sign in as `alice` or `bob`; their generated
+passwords are stored in `dev/local/.runtime/accounts.json`. Use a separate browser
+profile or private window for the second player. Both accounts are already in the
+Doodle Phone, Sketch & Guess, and Linux Terminal rooms, with their widgets pinned.
+Approve widget permissions when Element prompts. Rooms are unencrypted for these
+room-event protocols. Room links are saved in `dev/local/.runtime/rooms.json`.
+
+The dedicated `matrix-widgets-test` Compose project runs Synapse, Element, a widget
+web server, LiveKit, and its Matrix authorization service. LiveKit uses Linux host
+networking with its RTC interface restricted to loopback, avoiding Docker NAT.
+The verified container versions are pinned by digest. Browser endpoints bind
+only to loopback. `localhost` URLs require running the browser on the same computer.
+A generated self-signed certificate is used only for internal OpenID verification;
+the browser uses HTTP localhost, which supports secure-context features without
+installing certificates. Development registration/LiveKit secrets are deliberately
+local-only; this stack is not a production deployment.
+
+Rebuild widget changes with `pnpm build`, then reload the widget in Element. The web
+server mounts each app's `dist` folder directly. `pnpm local:seed` reapplies the room
+widgets without recreating existing rooms. `pnpm local:down` keeps the dedicated
+Synapse volume and account credentials, so the next start restores the same users
+and room history. Keep `.runtime/` private; its credentials and keys are gitignored.
+
 ## Matrix setup
 
 Serve builds over HTTPS from a host that permits embedding by your Matrix client.

@@ -1,0 +1,54 @@
+name: matrix-widgets-test
+services:
+  synapse:
+    image: ghcr.io/element-hq/synapse:develop@sha256:f6894ed79b3335e2c1c3b3946f193913857548e7e7ae5f270903230503336584
+    environment:
+      SYNAPSE_CONFIG_PATH: /config/homeserver.yaml
+    volumes:
+      - ./homeserver.yaml:/config/homeserver.yaml:ro
+      - synapse-data:/data
+    ports:
+      - 127.0.0.1:8008:8008
+  element:
+    image: ghcr.io/element-hq/element-web:develop@sha256:2cd8d84f676260facebb40e525412cc226f7884366d0562e3efc480f392acc4c
+    volumes:
+      - ./element.json:/app/config.json:ro
+    ports:
+      - 127.0.0.1:8080:80
+  widgets:
+    image: nginx:alpine@sha256:a3554c0d0b48177b1413c26e01f695334428020d9df01243fbae3e11cfd17417
+    volumes:
+      - ../../packages/doodle-phone/dist:/usr/share/nginx/html/doodle-phone:ro
+      - ../../packages/sketch-guess/dist:/usr/share/nginx/html/sketch-guess:ro
+      - ../../packages/linux/dist:/usr/share/nginx/html/linux:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./.runtime:/certs:ro
+    ports:
+      - 127.0.0.1:8090:80
+      - 127.0.0.1:8448:8448
+    networks:
+      default:
+        aliases: [matrix.localhost]
+    depends_on: [synapse]
+  livekit:
+    image: livekit/livekit-server:v1.13.4@sha256:189f7c81b704a36642bc5c7e2d3e1ae83744627c11978a23a251bf19fbec64e0
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    network_mode: host
+  livekit-auth:
+    image: ghcr.io/element-hq/lk-jwt-service:0.8.0@sha256:fe787619877b9c12d4370ed39dc8edecf99b1a71fa8958c0fdcb687c1d31c775
+    environment:
+      LIVEKIT_URL: ws://localhost:7880
+      LIVEKIT_JWT_BIND: 127.0.0.1:8082
+      LIVEKIT_KEY: widgetdev
+      LIVEKIT_SECRET: local-widget-testing-secret-at-least-32-chars
+      LIVEKIT_FULL_ACCESS_HOMESERVERS: matrix.localhost
+      LIVEKIT_INSECURE_SKIP_VERIFY_TLS: YES_I_KNOW_WHAT_I_AM_DOING
+      LIVEKIT_CS_API_URL_OVERRIDES: matrix.localhost=http://localhost:8008
+    network_mode: host
+    extra_hosts:
+      - matrix.localhost:127.0.0.1
+    depends_on: [widgets, livekit]
+volumes:
+  synapse-data:

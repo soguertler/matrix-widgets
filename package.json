@@ -15,13 +15,19 @@
     "preview:sketch": "pnpm --filter @matrix-widgets/sketch-guess preview",
     "preview:linux": "pnpm --filter @matrix-widgets/linux preview",
     "lint": "oxlint packages scripts",
-    "fmt": "oxfmt packages scripts package.json pnpm-workspace.yaml README.md .github",
-    "fmt:check": "oxfmt --check packages scripts package.json pnpm-workspace.yaml README.md .github",
+    "fmt": "oxfmt packages scripts package.json pnpm-workspace.yaml README.md .github dev",
+    "fmt:check": "oxfmt --check packages scripts package.json pnpm-workspace.yaml README.md .github dev",
     "check": "pnpm fmt:check && pnpm lint && pnpm test && pnpm build",
     "assets:linux": "pnpm --filter @matrix-widgets/linux assets",
     "guest:build": "pnpm --filter @matrix-widgets/linux guest:build",
     "release:prepare": "pnpm build && node scripts/prepare-release.mjs",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "local:up": "pnpm build && node scripts/local-stack.mjs up",
+    "local:down": "node scripts/local-stack.mjs down",
+    "local:seed": "node scripts/local-stack.mjs seed",
+    "local:logs": "node scripts/local-stack.mjs logs",
+    "local:status": "node scripts/local-stack.mjs status",
+    "local:check": "node scripts/check-local-stack.mjs"
   },
   "devDependencies": {
     "oxfmt": "0.74.0",
